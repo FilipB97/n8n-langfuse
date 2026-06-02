@@ -1,0 +1,44 @@
+{
+  "name": "n8n-nodes-langfuse-studio",
+  "version": "1.0.5",
+  "description": "n8n community node for Langfuse ingestion and Public API access.",
+  "license": "MIT",
+  "author": {
+    "name": "filip.benklewski"
+  },
+  "keywords": [
+    "n8n-community-node-package",
+    "langfuse",
+    "observability",
+    "llm"
+  ],
+  "main": "dist/index.js",
+  "files": [
+    "dist/index.js",
+    "dist/index.d.ts",
+    "dist/index.js.map",
+    "dist/index.d.ts.map",
+    "dist/src",
+    "dist/nodes/Langfuse",
+    "dist/credentials",
+    "README.md",
+    "docs"
+  ],
+  "scripts": {
+    "compile": "node ./scripts/clean-dist.mjs && node ../node_modules/typescript/bin/tsc -p . && node ./scripts/copy-assets.mjs",
+    "build": "npm run compile",
+    "test": "node ../node_modules/tsx/dist/cli.mjs --test tests/**/*.test.ts",
+    "lint": "node ../node_modules/typescript/bin/tsc -p . --noEmit",
+    "dev": "npm run compile",
+    "package": "npm run compile"
+  },
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "dist/credentials/LangfuseApi.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/Langfuse/Langfuse.node.js"
+    ]
+  }
+}

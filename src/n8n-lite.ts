@@ -1,0 +1,105 @@
+import type { LangfuseCredentials } from './langfuse.js';
+
+export interface NodeParameterOption {
+  name: string;
+  value: string;
+  action?: string;
+  description?: string;
+  routing?: Record<string, unknown>;
+}
+
+export interface NodePropertyDisplayOptions {
+  show: {
+    resource?: string[];
+    operation?: string[];
+    showAdvancedFields?: boolean[];
+  };
+}
+
+export interface NodeProperty {
+  displayName: string;
+  name: string;
+  type: string;
+  default?: unknown;
+  required?: boolean;
+  description?: string;
+  placeholder?: string;
+  hint?: string;
+  noDataExpression?: boolean;
+  options?: NodeParameterOption[];
+  typeOptions?: Record<string, unknown>;
+  displayOptions?: NodePropertyDisplayOptions;
+}
+
+export interface NodeDescription {
+  displayName: string;
+  name: string;
+  icon?: string | {
+    light: string;
+    dark: string;
+  };
+  group: string[];
+  version: number;
+  subtitle?: string;
+  description: string;
+  defaults: {
+    name: string;
+  };
+  inputs: string[];
+  outputs: string[];
+  credentials: Array<{
+    name: string;
+    required: boolean;
+  }>;
+  properties: NodeProperty[];
+}
+
+export interface NodeInputItem {
+  json: Record<string, unknown>;
+}
+
+export interface LangfuseExecuteContext {
+  getInputData(): NodeInputItem[];
+  getNodeParameter(name: string, index: number): unknown;
+  getCredentials(name: string): Promise<LangfuseCredentials>;
+  continueOnFail?: () => boolean;
+}
+
+export interface CredentialProperty {
+  displayName: string;
+  name: string;
+  type: string;
+  default?: unknown;
+  required?: boolean;
+  description?: string;
+  typeOptions?: Record<string, unknown>;
+}
+
+export interface CredentialDescription {
+  name: string;
+  displayName: string;
+  icon?: string | {
+    light: string;
+    dark: string;
+  };
+  documentationUrl: string;
+  authenticate?: {
+    type: 'generic';
+    properties: {
+      auth?: {
+        username: string;
+        password: string;
+      };
+      header?: Record<string, string>;
+      body?: Record<string, string>;
+      qs?: Record<string, string>;
+    };
+  };
+  test?: {
+    request: {
+      baseURL?: string;
+      url: string;
+    };
+  };
+  properties: CredentialProperty[];
+}
