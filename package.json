@@ -6,6 +6,13 @@
   "author": {
     "name": "filip.benklewski"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FilipB97/n8n-langfuse.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "keywords": [
     "n8n-community-node-package",
     "langfuse",

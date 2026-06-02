@@ -1,0 +1,38 @@
+name: Publish Package
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false
+
+      - name: Build package
+        run: npx --yes --package typescript@5.9.3 tsc -p .
+
+      - name: Copy packaged assets
+        run: node ./scripts/copy-assets.mjs
+
+      - name: Run tests
+        run: npx --yes --package tsx@4.21.0 tsx --test tests/**/*.test.ts
+
+      - name: Publish to npm
+        run: npm publish
