@@ -1,6 +1,6 @@
 import { buildBasicAuthHeader, LangfuseRequestError, normalizeBaseUrl, parseJsonMaybe } from './langfuse.js';
 
-export type LangfusePublicApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+export type LangfusePublicApiMethod = 'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 export type LangfusePublicApiOperation =
   | 'health'
@@ -87,6 +87,18 @@ function asQueryObject(value: unknown): Record<string, string | number | boolean
   }
 
   return parsed as Record<string, string | number | boolean | undefined>;
+}
+
+function asRequestBody(value: unknown): unknown {
+  if (typeof value === 'string' && value.trim() === '') {
+    return undefined;
+  }
+
+  return parseJsonMaybe(value);
+}
+
+function methodAllowsBody(method: LangfusePublicApiMethod): boolean {
+  return method !== 'GET' && method !== 'HEAD';
 }
 
 export function resolveLangfusePublicApiEndpoint(
@@ -208,11 +220,12 @@ export function resolveLangfusePublicApiEndpoint(
       }
 
       const query = asQueryObject(params.queryJson);
-      const body = parseJsonMaybe(params.bodyJson);
+      const method = (params.method ?? 'GET') as LangfusePublicApiMethod;
+      const body = methodAllowsBody(method) ? asRequestBody(params.bodyJson) : undefined;
 
       return {
         path,
-        method: (params.method ?? 'GET') as LangfusePublicApiMethod,
+        method,
         ...(query !== undefined ? { query } : {}),
         ...(body !== undefined ? { body } : {}),
       };
@@ -223,12 +236,13 @@ export function resolveLangfusePublicApiEndpoint(
 export async function requestLangfusePublicApi(options: LangfusePublicApiRequestOptions): Promise<LangfusePublicApiResponse> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const url = buildLangfusePublicApiUrl(options.baseUrl, options.path, options.query);
+  const method = options.method ?? 'GET';
   const headers: Record<string, string> = {
     Authorization: buildBasicAuthHeader(options.publicKey, options.secretKey),
   };
 
   let body: string | undefined;
-  if (options.body !== undefined) {
+  if (methodAllowsBody(method) && options.body !== undefined) {
     headers['Content-Type'] = 'application/json';
     body = JSON.stringify(options.body);
   }
@@ -254,7 +268,7 @@ export async function requestLangfusePublicApi(options: LangfusePublicApiRequest
 
   try {
     const response = await fetchImpl(url, {
-      method: options.method ?? 'GET',
+      method,
       headers,
       ...(body !== undefined ? { body } : {}),
       signal: controller.signal,

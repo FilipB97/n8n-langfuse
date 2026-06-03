@@ -598,7 +598,7 @@ const description: NodeDescription = {
       type: 'string',
       default: '',
       placeholder: '{"name":"prompt-name"}',
-      description: 'JSON request body for Custom Request.',
+      description: 'JSON request body for Custom Request. Ignored for GET and HEAD requests.',
       displayOptions: showPublicApi('customRequest'),
     },
     {

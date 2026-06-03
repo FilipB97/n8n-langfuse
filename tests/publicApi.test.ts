@@ -61,6 +61,31 @@ test('requestLangfusePublicApi supports prompt label and version query params', 
   assert.equal(calls[0]?.url, 'https://cloud.langfuse.com/api/public/v2/prompts/answer-query?label=production&version=2');
 });
 
+test('requestLangfusePublicApi never sends a body for GET requests', async () => {
+  const calls: Array<RequestInit & { url: string }> = [];
+  const fakeFetch: typeof fetch = async (input, init) => {
+    calls.push({ url: String(input), ...(init ?? {}) });
+    return new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+
+  await requestLangfusePublicApi({
+    baseUrl: 'https://cloud.langfuse.com',
+    publicKey: 'pk-test',
+    secretKey: 'sk-test',
+    path: '/health',
+    method: 'GET',
+    body: {},
+    fetchImpl: fakeFetch,
+  });
+
+  assert.equal(calls[0]?.method, 'GET');
+  assert.equal(calls[0]?.body, undefined);
+  assert.equal(new Headers(calls[0]?.headers).get('content-type'), null);
+});
+
 test('resolveLangfusePublicApiEndpoint resolves getPrompt and customRequest payloads', () => {
   assert.deepEqual(
     resolveLangfusePublicApiEndpoint('getPrompt', {
@@ -95,6 +120,22 @@ test('resolveLangfusePublicApiEndpoint resolves getPrompt and customRequest payl
       body: {
         name: 'answer-query',
       },
+    },
+  );
+});
+
+test('resolveLangfusePublicApiEndpoint omits empty customRequest body for GET requests', () => {
+  assert.deepEqual(
+    resolveLangfusePublicApiEndpoint('customRequest', {
+      path: '/health',
+      method: 'GET',
+      queryJson: '{}',
+      bodyJson: '',
+    }),
+    {
+      path: '/health',
+      method: 'GET',
+      query: {},
     },
   );
 });
