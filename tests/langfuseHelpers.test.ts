@@ -2,9 +2,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  asString,
   buildBasicAuthHeader,
   buildBatchRequestBody,
   buildPromptUrl,
+  createEventEvent,
   createGenerationEvent,
   createScoreEvent,
   createSpanEvent,
@@ -120,6 +122,33 @@ test('createScoreEvent serializes numeric and categorical score payloads', () =>
   assert.equal(score.body.value, 0.95);
   assert.equal(score.body.dataType, 'NUMERIC');
   assert.equal(score.body.id, 'score-1');
+});
+
+test('asString trims strings and returns undefined for blank or non-string values', () => {
+  assert.equal(asString('  hello  '), 'hello');
+  assert.equal(asString(''), undefined);
+  assert.equal(asString('   '), undefined);
+  assert.equal(asString(42), undefined);
+  assert.equal(asString(null), undefined);
+});
+
+test('createTraceEvent includes environment when provided', () => {
+  const event = createTraceEvent({
+    traceId: '1234567890abcdef1234567890abcdef',
+    name: 'checkout',
+    environment: 'production',
+    timestamp: '2026-06-02T10:00:00.000Z',
+  });
+  assert.equal(event.body.environment, 'production');
+});
+
+test('createSpanEvent and createGenerationEvent and createEventEvent include environment', () => {
+  const span = createSpanEvent({ environment: 'staging', timestamp: '2026-06-02T10:00:00.000Z' });
+  const gen = createGenerationEvent({ environment: 'production', timestamp: '2026-06-02T10:00:00.000Z' });
+  const evt = createEventEvent({ environment: 'development', timestamp: '2026-06-02T10:00:00.000Z' });
+  assert.equal(span.body.environment, 'staging');
+  assert.equal(gen.body.environment, 'production');
+  assert.equal(evt.body.environment, 'development');
 });
 
 test('sendLangfuseIngestion accepts 207 multi-status with successes and errors', async () => {

@@ -1,4 +1,5 @@
 import {
+  asString,
   buildIngestionUrl,
   sendLangfuseIngestion,
 } from '../../src/langfuse.js';
@@ -135,6 +136,8 @@ const description: NodeDescription = {
         { name: 'List Scores', value: 'listScores', action: 'List scores', description: 'Read scores from Langfuse.' },
         { name: 'Get Score', value: 'getScore', action: 'Get score', description: 'Read a single score by ID.' },
         { name: 'List Observations', value: 'listObservations', action: 'List observations', description: 'Read observations from Langfuse.' },
+        { name: 'Get Observation', value: 'getObservation', action: 'Get observation', description: 'Read a single observation by ID.' },
+        { name: 'List Sessions', value: 'listSessions', action: 'List sessions', description: 'Read sessions from Langfuse.' },
         { name: 'List Annotation Queues', value: 'listAnnotationQueues', action: 'List annotation queues', description: 'Read annotation queues.' },
         { name: 'Get Annotation Queue', value: 'getAnnotationQueue', action: 'Get annotation queue', description: 'Read a single annotation queue by ID.' },
         { name: 'Custom Request', value: 'customRequest', action: 'Send custom request', description: 'Call any Langfuse public API endpoint.' },
@@ -270,6 +273,15 @@ const description: NodeDescription = {
       placeholder: 'prod,checkout',
       description: 'Comma-separated tags or a JSON array of tags.',
       displayOptions: showIngestion('traceCreate'),
+    },
+    {
+      displayName: 'Environment',
+      name: 'environment',
+      type: 'string',
+      default: '',
+      placeholder: 'production',
+      description: 'Optional environment label for the trace or observation.',
+      displayOptions: showIngestion('traceCreate', 'spanCreate', 'generationCreate', 'eventCreate'),
     },
     {
       displayName: 'Input JSON',
@@ -442,6 +454,14 @@ const description: NodeDescription = {
       displayOptions: showPublicApiBasic('getScore'),
     },
     {
+      displayName: 'Observation ID',
+      name: 'observationId',
+      type: 'string',
+      default: '',
+      description: 'Observation id to fetch from Langfuse.',
+      displayOptions: showPublicApiBasic('getObservation'),
+    },
+    {
       displayName: 'Score Name',
       name: 'scoreName',
       type: 'string',
@@ -590,7 +610,7 @@ const description: NodeDescription = {
       default: '',
       placeholder: '{"page":1,"limit":20}',
       description: 'JSON object converted into query string parameters.',
-      displayOptions: showPublicApi('listPrompts', 'listTraces', 'listScores', 'listObservations', 'listAnnotationQueues', 'customRequest'),
+      displayOptions: showPublicApi('listPrompts', 'listTraces', 'listScores', 'listObservations', 'listSessions', 'listAnnotationQueues', 'customRequest'),
     },
     {
       displayName: 'Body JSON',
@@ -616,19 +636,10 @@ const description: NodeDescription = {
       type: 'boolean',
       default: false,
       description: 'Fail the item when Langfuse returns partial ingestion errors.',
-      displayOptions: showIngestion('traceCreate', 'spanCreate', 'spanUpdate', 'generationCreate', 'generationUpdate', 'eventCreate', 'scoreCreate', 'sdkLogCreate', 'batchRaw'),
+      displayOptions: showIngestion('traceCreate', 'spanCreate', 'spanUpdate', 'generationCreate', 'generationUpdate', 'finalizeSpan', 'eventCreate', 'scoreCreate', 'sdkLogCreate', 'batchRaw'),
     },
   ],
 };
-
-function asString(value: unknown): string | undefined {
-  if (typeof value !== 'string') {
-    return undefined;
-  }
-
-  const trimmed = value.trim();
-  return trimmed ? trimmed : undefined;
-}
 
 function getOptionalNodeParameter(
   context: LangfuseExecuteContext,
@@ -723,6 +734,8 @@ function buildIngestionParameters(context: LangfuseExecuteContext, itemIndex: nu
   if (sdkMessage !== undefined) params.sdkMessage = sdkMessage;
   if (sdkLevel !== undefined) params.sdkLevel = sdkLevel;
   params.batchJson = getOptionalNodeParameter(context, 'batchJson', itemIndex);
+  const environment = asString(getOptionalNodeParameter(context, 'environment', itemIndex));
+  if (environment !== undefined) params.environment = environment;
 
   return params;
 }
@@ -741,6 +754,7 @@ function buildPublicApiParameters(
     case 'listTraces':
     case 'listScores':
     case 'listObservations':
+    case 'listSessions':
     case 'listAnnotationQueues':
       params.queryJson = getOptionalNodeParameter(context, 'queryJson', itemIndex);
       break;
@@ -761,6 +775,11 @@ function buildPublicApiParameters(
     case 'getScore': {
       const scoreId = asString(getOptionalNodeParameter(context, 'scoreId', itemIndex));
       if (scoreId !== undefined) params.scoreId = scoreId;
+      break;
+    }
+    case 'getObservation': {
+      const observationId = asString(getOptionalNodeParameter(context, 'observationId', itemIndex));
+      if (observationId !== undefined) params.observationId = observationId;
       break;
     }
     case 'getAnnotationQueue': {
@@ -796,11 +815,11 @@ export class Langfuse {
   async execute(this: LangfuseExecuteContext) {
     const items = this.getInputData();
     const output: Array<{ json: Record<string, unknown> }> = [];
+    const credentials = await this.getCredentials('langfuseApi');
 
     for (const [itemIndex] of items.entries()) {
       const resource = this.getNodeParameter('resource', itemIndex) as LangfuseResource;
       const operation = this.getNodeParameter('operation', itemIndex) as LangfuseOperation | LangfusePublicApiOperation;
-      const credentials = await this.getCredentials('langfuseApi');
 
       try {
         if (resource === 'ingestion') {

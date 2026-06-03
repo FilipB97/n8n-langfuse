@@ -124,6 +124,32 @@ test('resolveLangfusePublicApiEndpoint resolves getPrompt and customRequest payl
   );
 });
 
+test('resolveLangfusePublicApiEndpoint resolves getObservation with ID', () => {
+  assert.deepEqual(
+    resolveLangfusePublicApiEndpoint('getObservation', { observationId: 'obs-abc-123' }),
+    { path: '/v2/observations/obs-abc-123', method: 'GET' },
+  );
+});
+
+test('resolveLangfusePublicApiEndpoint throws when getObservation has no observationId', () => {
+  assert.throws(
+    () => resolveLangfusePublicApiEndpoint('getObservation', {}),
+    /observationId is required/i,
+  );
+});
+
+test('resolveLangfusePublicApiEndpoint resolves listSessions with optional query', () => {
+  assert.deepEqual(
+    resolveLangfusePublicApiEndpoint('listSessions', { queryJson: '{"page":1,"limit":10}' }),
+    { path: '/sessions', method: 'GET', query: { page: 1, limit: 10 } },
+  );
+
+  assert.deepEqual(
+    resolveLangfusePublicApiEndpoint('listSessions', {}),
+    { path: '/sessions', method: 'GET' },
+  );
+});
+
 test('resolveLangfusePublicApiEndpoint omits empty customRequest body for GET requests', () => {
   assert.deepEqual(
     resolveLangfusePublicApiEndpoint('customRequest', {
