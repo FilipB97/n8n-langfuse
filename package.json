@@ -47,5 +47,10 @@
     "nodes": [
       "dist/nodes/Langfuse/Langfuse.node.js"
     ]
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3"
   }
 }
