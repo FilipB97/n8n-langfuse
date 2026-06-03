@@ -82,6 +82,7 @@ export interface TraceEventInput {
   input?: unknown;
   output?: unknown;
   version?: string;
+  environment?: string;
 }
 
 export interface ObservationEventInput {
@@ -99,6 +100,7 @@ export interface ObservationEventInput {
   version?: string;
   level?: string;
   statusMessage?: string;
+  environment?: string;
 }
 
 export interface GenerationEventInput extends ObservationEventInput {
@@ -152,6 +154,14 @@ export class LangfuseRequestError extends Error {
     this.status = status;
     this.body = body;
   }
+}
+
+export function asString(value: unknown): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
 }
 
 export function normalizeBaseUrl(baseUrl: string): string {
@@ -310,6 +320,7 @@ export function createTraceEvent(input: TraceEventInput): IngestionEvent {
   if (input.input !== undefined) body.input = normalizeJsonValue(input.input) ?? null;
   if (input.output !== undefined) body.output = normalizeJsonValue(input.output) ?? null;
   if (input.version !== undefined) body.version = input.version;
+  if (input.environment !== undefined) body.environment = input.environment;
 
   return {
     id: ensureEventId(input.eventId),
@@ -335,6 +346,7 @@ export function createSpanEvent(input: ObservationEventInput): IngestionEvent {
   if (input.version !== undefined) body.version = input.version;
   if (input.level !== undefined) body.level = input.level;
   if (input.statusMessage !== undefined) body.statusMessage = input.statusMessage;
+  if (input.environment !== undefined) body.environment = input.environment;
 
   return {
     id: ensureEventId(input.eventId),
@@ -377,6 +389,7 @@ export function createGenerationEvent(input: GenerationEventInput): IngestionEve
   if (input.promptVersion !== undefined) body.promptVersion = input.promptVersion;
   if (input.promptLabels !== undefined) body.promptLabels = normalizeJsonValue(input.promptLabels) ?? null;
   if (input.endTime !== undefined) body.endTime = input.endTime;
+  if (input.environment !== undefined) body.environment = input.environment;
 
   return {
     id: ensureEventId(input.eventId),
@@ -409,6 +422,7 @@ export function createEventEvent(input: ObservationEventInput): IngestionEvent {
   if (input.version !== undefined) body.version = input.version;
   if (input.level !== undefined) body.level = input.level;
   if (input.statusMessage !== undefined) body.statusMessage = input.statusMessage;
+  if (input.environment !== undefined) body.environment = input.environment;
 
   return {
     id: ensureEventId(input.eventId),

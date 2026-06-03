@@ -1,4 +1,5 @@
 import {
+  asString,
   createEventEvent,
   createGenerationEvent,
   createGenerationUpdateEvent,
@@ -74,15 +75,7 @@ export interface LangfuseOperationParameters {
   sdkMessage?: string;
   sdkLevel?: 'debug' | 'info' | 'warn' | 'error';
   batchJson?: unknown;
-}
-
-function asString(value: unknown): string | undefined {
-  if (typeof value !== 'string') {
-    return undefined;
-  }
-
-  const trimmed = value.trim();
-  return trimmed ? trimmed : undefined;
+  environment?: string;
 }
 
 function requireString(value: unknown, message: string): string {
@@ -199,6 +192,8 @@ function toTraceInput(params: LangfuseOperationParameters): TraceEventInput {
   const outputJson = parseJsonField(params.outputJson);
   if (outputJson !== undefined) input.output = outputJson;
   if (version !== undefined) input.version = version;
+  const environment = asString(params.environment);
+  if (environment !== undefined) input.environment = environment;
 
   return input;
 }
@@ -239,6 +234,8 @@ function toObservationInput(params: LangfuseOperationParameters, requireObservat
   if (statusMessage !== undefined) input.statusMessage = statusMessage;
   if (startTime !== undefined) input.startTime = startTime;
   if (endTime !== undefined) input.endTime = endTime;
+  const environment = asString(params.environment);
+  if (environment !== undefined) input.environment = environment;
 
   return input;
 }
@@ -284,8 +281,9 @@ function toScoreInput(params: LangfuseOperationParameters): ScoreEventInput {
   }
 
   const traceId = asString(params.scoreTraceId) ?? asString(params.traceId);
-  if (traceId === undefined) {
-    throw new Error('traceId is required for scoreCreate operations');
+  const resolvedSessionId = asString(params.scoreSessionId) ?? asString(params.sessionId);
+  if (traceId === undefined && resolvedSessionId === undefined) {
+    throw new Error('scoreCreate requires either traceId or sessionId');
   }
 
   const input: ScoreEventInput = {
@@ -295,7 +293,6 @@ function toScoreInput(params: LangfuseOperationParameters): ScoreEventInput {
 
   const scoreId = asString(params.scoreId);
   const observationId = asString(params.scoreObservationId) ?? asString(params.observationId);
-  const sessionId = asString(params.scoreSessionId) ?? asString(params.sessionId);
   const datasetRunId = asString(params.scoreDatasetRunId);
   const timestamp = asString(params.timestamp);
   const comment = asString(params.scoreComment);
@@ -306,7 +303,7 @@ function toScoreInput(params: LangfuseOperationParameters): ScoreEventInput {
   if (scoreId !== undefined) input.scoreId = scoreId;
   if (traceId !== undefined) input.traceId = traceId;
   if (observationId !== undefined) input.observationId = observationId;
-  if (sessionId !== undefined) input.sessionId = sessionId;
+  if (resolvedSessionId !== undefined) input.sessionId = resolvedSessionId;
   if (datasetRunId !== undefined) input.datasetRunId = datasetRunId;
   if (timestamp !== undefined) input.timestamp = timestamp;
   if (params.scoreDataType !== undefined) input.dataType = params.scoreDataType;

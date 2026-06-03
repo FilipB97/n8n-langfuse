@@ -83,13 +83,35 @@ test('buildEventsForOperation requires trace ids and score values for scoreCreat
   assert.throws(() => buildEventsForOperation('scoreCreate', {
     scoreName: 'relevance',
     scoreValue: '0.99',
-  }), /traceId is required/i);
+  }), /traceId or sessionId/i);
 
   assert.throws(() => buildEventsForOperation('scoreCreate', {
     traceId: '1234567890abcdef1234567890abcdef',
     scoreName: 'relevance',
     scoreValue: '',
   }), /scoreValue is required/i);
+});
+
+test('buildEventsForOperation scoreCreate accepts session-only scores without traceId', () => {
+  const events = buildEventsForOperation('scoreCreate', {
+    scoreSessionId: 'session-abc',
+    scoreName: 'relevance',
+    scoreValue: '0.99',
+  });
+  assert.equal(events[0]?.type, 'score-create');
+  assert.equal(events[0]?.body.sessionId, 'session-abc');
+  assert.equal(events[0]?.body.traceId, undefined);
+});
+
+test('buildEventsForOperation passes environment through to traceCreate and spanCreate', () => {
+  const traceEvents = buildEventsForOperation('traceCreate', { name: 'checkout', environment: 'production' });
+  assert.equal(traceEvents[0]?.body.environment, 'production');
+
+  const spanEvents = buildEventsForOperation('spanCreate', { environment: 'staging' });
+  assert.equal(spanEvents[0]?.body.environment, 'staging');
+
+  const genEvents = buildEventsForOperation('generationCreate', { environment: 'development' });
+  assert.equal(genEvents[0]?.body.environment, 'development');
 });
 
 test('buildPromptRequestParameters trims and validates prompt fetch inputs', () => {

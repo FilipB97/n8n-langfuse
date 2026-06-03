@@ -1,4 +1,4 @@
-import { buildBasicAuthHeader, LangfuseRequestError, normalizeBaseUrl, parseJsonMaybe } from './langfuse.js';
+import { asString, buildBasicAuthHeader, LangfuseRequestError, normalizeBaseUrl, parseJsonMaybe } from './langfuse.js';
 
 export type LangfusePublicApiMethod = 'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -11,6 +11,8 @@ export type LangfusePublicApiOperation =
   | 'listScores'
   | 'getScore'
   | 'listObservations'
+  | 'getObservation'
+  | 'listSessions'
   | 'listAnnotationQueues'
   | 'getAnnotationQueue'
   | 'customRequest';
@@ -41,6 +43,7 @@ export interface LangfusePublicApiParameters {
   promptVersion?: string;
   traceId?: string;
   scoreId?: string;
+  observationId?: string;
   queueId?: string;
   path?: string;
   method?: LangfusePublicApiMethod;
@@ -69,15 +72,6 @@ export function buildLangfusePublicApiUrl(baseUrl: string, path: string, query?:
   const prefix = normalized.endsWith('/api/public') ? normalized : `${normalized}/api/public`;
   const resolvedPath = path.startsWith('/') ? path : `/${path}`;
   return `${prefix}${resolvedPath}${buildQueryString(query)}`;
-}
-
-function asString(value: unknown): string | undefined {
-  if (typeof value !== 'string') {
-    return undefined;
-  }
-
-  const trimmed = value.trim();
-  return trimmed ? trimmed : undefined;
 }
 
 function asQueryObject(value: unknown): Record<string, string | number | boolean | undefined> | undefined {
@@ -192,6 +186,26 @@ export function resolveLangfusePublicApiEndpoint(
         method: 'GET',
         ...(query !== undefined ? { query } : {}),
       };
+      }
+    case 'getObservation': {
+      const observationId = asString(params.observationId);
+      if (observationId === undefined) {
+        throw new Error('observationId is required for getObservation');
+      }
+
+      return {
+        path: `/v2/observations/${encodeURIComponent(observationId)}`,
+        method: 'GET',
+      };
+    }
+    case 'listSessions':
+      {
+        const query = asQueryObject(params.queryJson);
+        return {
+          path: '/sessions',
+          method: 'GET',
+          ...(query !== undefined ? { query } : {}),
+        };
       }
     case 'listAnnotationQueues':
       {
