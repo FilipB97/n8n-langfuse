@@ -88,6 +88,7 @@ See:
 - [Ingestion coverage](docs/api-coverage.md)
 - [Public API coverage](docs/public-api-coverage.md)
 - [Development](docs/development.md)
+- [Changelog](CHANGELOG.md)
 
 ## Supported Behavior
 

@@ -29,13 +29,14 @@
     "dist/nodes/Langfuse",
     "dist/credentials",
     "README.md",
+    "CHANGELOG.md",
     "docs"
   ],
   "scripts": {
-    "compile": "node ./scripts/clean-dist.mjs && node ../node_modules/typescript/bin/tsc -p . && node ./scripts/copy-assets.mjs",
+    "compile": "node ./scripts/clean-dist.mjs && tsc -p . && node ./scripts/copy-assets.mjs",
     "build": "npm run compile",
-    "test": "node ../node_modules/tsx/dist/cli.mjs --test tests/**/*.test.ts",
-    "lint": "node ../node_modules/typescript/bin/tsc -p . --noEmit",
+    "test": "tsx --test tests/**/*.test.ts",
+    "lint": "tsc -p . --noEmit",
     "dev": "npm run compile",
     "package": "npm run compile"
   },
