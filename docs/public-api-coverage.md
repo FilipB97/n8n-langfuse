@@ -15,11 +15,15 @@ This coverage map applies to the `Langfuse` node Public API operations. In **v1*
 | `List Scores` | `GET /api/public/v2/scores` | Uses `queryJson` for filtering |
 | `Get Score` | `GET /api/public/v2/scores/{scoreId}` | Fetches a single score |
 | `Delete Score` | `DELETE /api/public/v2/scores/{scoreId}` | Deletes a single score by id |
+| `List Score Configs` | `GET /api/public/score-configs` | Lists all score configuration definitions |
+| `Get Score Config` | `GET /api/public/score-configs/{configId}` | Fetches a single score config by ID |
 | `List Observations` | `GET /api/public/v2/observations` | Lists observations |
 | `Get Observation` | `GET /api/public/v2/observations/{observationId}` | Fetches a single observation |
 | `List Sessions` | `GET /api/public/sessions` | Uses `queryJson` for filtering |
+| `Get Session` | `GET /api/public/sessions/{sessionId}` | Fetches a single session by ID |
 | `List Annotation Queues` | `GET /api/public/annotation-queues` | Lists annotation queues |
 | `Get Annotation Queue` | `GET /api/public/annotation-queues/{queueId}` | Fetches a single queue |
+| `List Annotation Queue Items` | `GET /api/public/annotation-queues/{queueId}/items` | Lists items in a specific annotation queue |
 | `List Datasets` | `GET /api/public/v2/datasets` | Uses `queryJson` for pagination |
 | `Get Dataset` | `GET /api/public/v2/datasets/{datasetName}` | Fetches a single dataset by name |
 | `Create Dataset` | `POST /api/public/v2/datasets` | Body: `name` (required), `description`, `metadata` |
@@ -31,7 +35,7 @@ This coverage map applies to the `Langfuse` node Public API operations. In **v1*
 | `Get Dataset Run` | `GET /api/public/datasets/{datasetName}/runs/{runName}` | Fetches a single run |
 | `Delete Dataset Run` | `DELETE /api/public/datasets/{datasetName}/runs/{runName}` | Deletes a run by name |
 | `Create Dataset Run Item` | `POST /api/public/dataset-run-items` | Body: `runName` (required), `datasetItemId` (required), `traceId` or `observationId`, `runDescription`, `metadata` |
-| `Custom Request` | Any endpoint under `/api/public` | Escape hatch for newer endpoints |
+| `Custom Request` | Any endpoint under `/api/public` | Escape hatch for newer or unlisted endpoints |
 
 ## Shared behavior
 
