@@ -102,7 +102,7 @@ Langfuse uses Basic Auth:
 
 See:
 
-- [Full demo workflow](docs/example-workflow.md) — importable n8n workflow that runs every operation end-to-end with a real OpenAI call ([`example-workflow.json`](docs/example-workflow.json))
+- [Grouped demo workflow](docs/example-workflow.md) — importable n8n workflow that fans out into four readable lanes (ingestion, reads, datasets, prompts) with a real OpenAI call ([`example-workflow.json`](docs/example-workflow.json))
 - [Dataset evaluation workflow](docs/example-eval-workflow.md) — importable LLM evaluation loop using datasets, dataset runs, and scores ([`example-eval-workflow.json`](docs/example-eval-workflow.json))
 - [Examples](docs/examples.md)
 - [Quick test](docs/quick-test.md)
