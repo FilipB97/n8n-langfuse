@@ -29,5 +29,8 @@ jobs:
       - name: Type check
         run: ./node_modules/.bin/tsc -p . --noEmit
 
+      - name: Lint (n8n node conventions)
+        run: ./node_modules/.bin/eslint "nodes/**/*.ts" "credentials/**/*.ts"
+
       - name: Run tests
         run: ./node_modules/.bin/tsx --test tests/**/*.test.ts

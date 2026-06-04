@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Official n8n linting.** Adopted `eslint-plugin-n8n-nodes-base` to enforce
+  node/credential conventions (description style, `ID` casing, option ordering,
+  boolean phrasing). Runs via `npm run lint` and in CI.
+- **Execute-layer tests.** New `tests/nodeExecute.test.ts` exercises the node's
+  `runExecute` end-to-end with a mock context and stubbed `fetch`: operation
+  routing (ingestion vs Public API), POST body construction, `pairedItem`
+  tagging, and `continueOnFail` behavior.
+
+### Changed
+
+- Applied the n8n lint conventions across the node UI: trimmed trailing periods,
+  fixed `ID` casing, alphabetized option lists, and reworded boolean field
+  descriptions to start with "Whether". No functional change to operations.
+
 ## [1.4.0] - 2026-06-04
 
 ### Added
