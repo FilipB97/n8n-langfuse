@@ -77,7 +77,7 @@ Wydania sa sterowane tagiem. Aby wydac wersje `X.Y.Z`:
 1. Podbij `version` w `package.json`.
 2. W `CHANGELOG.md` przenies sekcje `## [Unreleased]` do `## [X.Y.Z] - <data>` i dodaj
    link wersji na dole pliku.
-3. Zacommituj, wypchnij i zmerguj do `codex/initial-publish`.
+3. Zacommituj, wypchnij i zmerguj do `main`.
 4. Utworz i wypchnij tag: `git tag vX.Y.Z <commit> && git push origin vX.Y.Z`.
 
 Tag uruchamia workflow `publish.yml`, ktory:
