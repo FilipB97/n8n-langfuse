@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Dataset API support (node v2).** Three new entity resources cover the full
+  Langfuse evaluation loop:
+  - **Dataset** — `Create`, `Get`, `List` (`/api/public/v2/datasets`).
+  - **Dataset Item** — `Create` (upsert), `Get`, `List`, `Delete`
+    (`/api/public/dataset-items`).
+  - **Dataset Run** — `List`, `Get`, `Delete`, and `Create Run Item`
+    (`/api/public/datasets/{name}/runs` and `/api/public/dataset-run-items`).
+
 ### Fixed
 
 - npm scripts (`compile`, `test`, `lint`) now resolve `tsc`/`tsx` from the local

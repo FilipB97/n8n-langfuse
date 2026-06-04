@@ -16,6 +16,17 @@ export type LangfusePublicApiOperation =
   | 'listSessions'
   | 'listAnnotationQueues'
   | 'getAnnotationQueue'
+  | 'listDatasets'
+  | 'getDataset'
+  | 'createDataset'
+  | 'listDatasetItems'
+  | 'getDatasetItem'
+  | 'createDatasetItem'
+  | 'deleteDatasetItem'
+  | 'listDatasetRuns'
+  | 'getDatasetRun'
+  | 'deleteDatasetRun'
+  | 'createDatasetRunItem'
   | 'customRequest';
 
 export interface LangfusePublicApiRequestOptions {
@@ -46,6 +57,17 @@ export interface LangfusePublicApiParameters {
   scoreId?: string;
   observationId?: string;
   queueId?: string;
+  datasetName?: string;
+  datasetItemId?: string;
+  runName?: string;
+  datasetDescription?: string;
+  datasetItemStatus?: string;
+  sourceTraceId?: string;
+  sourceObservationId?: string;
+  runDescription?: string;
+  inputJson?: unknown;
+  expectedOutputJson?: unknown;
+  metadataJson?: unknown;
   path?: string;
   method?: LangfusePublicApiMethod;
   queryJson?: unknown;
@@ -237,6 +259,172 @@ export function resolveLangfusePublicApiEndpoint(
       return {
         path: `/annotation-queues/${encodeURIComponent(queueId)}`,
         method: 'GET',
+      };
+    }
+    case 'listDatasets':
+      {
+        const query = asQueryObject(params.queryJson);
+        return {
+          path: '/v2/datasets',
+          method: 'GET',
+          ...(query !== undefined ? { query } : {}),
+        };
+      }
+    case 'getDataset': {
+      const datasetName = asString(params.datasetName);
+      if (datasetName === undefined) {
+        throw new Error('datasetName is required for getDataset');
+      }
+
+      return {
+        path: `/v2/datasets/${encodeURIComponent(datasetName)}`,
+        method: 'GET',
+      };
+    }
+    case 'createDataset': {
+      const datasetName = asString(params.datasetName);
+      if (datasetName === undefined) {
+        throw new Error('datasetName is required for createDataset');
+      }
+
+      const body: Record<string, unknown> = { name: datasetName };
+      const description = asString(params.datasetDescription);
+      if (description !== undefined) body.description = description;
+      const metadata = asRequestBody(params.metadataJson);
+      if (metadata !== undefined) body.metadata = metadata;
+
+      return {
+        path: '/v2/datasets',
+        method: 'POST',
+        body,
+      };
+    }
+    case 'listDatasetItems':
+      {
+        const query = asQueryObject(params.queryJson);
+        return {
+          path: '/dataset-items',
+          method: 'GET',
+          ...(query !== undefined ? { query } : {}),
+        };
+      }
+    case 'getDatasetItem': {
+      const datasetItemId = asString(params.datasetItemId);
+      if (datasetItemId === undefined) {
+        throw new Error('datasetItemId is required for getDatasetItem');
+      }
+
+      return {
+        path: `/dataset-items/${encodeURIComponent(datasetItemId)}`,
+        method: 'GET',
+      };
+    }
+    case 'createDatasetItem': {
+      const datasetName = asString(params.datasetName);
+      if (datasetName === undefined) {
+        throw new Error('datasetName is required for createDatasetItem');
+      }
+
+      const body: Record<string, unknown> = { datasetName };
+      const input = asRequestBody(params.inputJson);
+      if (input !== undefined) body.input = input;
+      const expectedOutput = asRequestBody(params.expectedOutputJson);
+      if (expectedOutput !== undefined) body.expectedOutput = expectedOutput;
+      const metadata = asRequestBody(params.metadataJson);
+      if (metadata !== undefined) body.metadata = metadata;
+      const sourceTraceId = asString(params.sourceTraceId);
+      if (sourceTraceId !== undefined) body.sourceTraceId = sourceTraceId;
+      const sourceObservationId = asString(params.sourceObservationId);
+      if (sourceObservationId !== undefined) body.sourceObservationId = sourceObservationId;
+      const id = asString(params.datasetItemId);
+      if (id !== undefined) body.id = id;
+      const status = asString(params.datasetItemStatus);
+      if (status !== undefined) body.status = status;
+
+      return {
+        path: '/dataset-items',
+        method: 'POST',
+        body,
+      };
+    }
+    case 'deleteDatasetItem': {
+      const datasetItemId = asString(params.datasetItemId);
+      if (datasetItemId === undefined) {
+        throw new Error('datasetItemId is required for deleteDatasetItem');
+      }
+
+      return {
+        path: `/dataset-items/${encodeURIComponent(datasetItemId)}`,
+        method: 'DELETE',
+      };
+    }
+    case 'listDatasetRuns': {
+      const datasetName = asString(params.datasetName);
+      if (datasetName === undefined) {
+        throw new Error('datasetName is required for listDatasetRuns');
+      }
+
+      const query = asQueryObject(params.queryJson);
+      return {
+        path: `/datasets/${encodeURIComponent(datasetName)}/runs`,
+        method: 'GET',
+        ...(query !== undefined ? { query } : {}),
+      };
+    }
+    case 'getDatasetRun': {
+      const datasetName = asString(params.datasetName);
+      const runName = asString(params.runName);
+      if (datasetName === undefined) {
+        throw new Error('datasetName is required for getDatasetRun');
+      }
+      if (runName === undefined) {
+        throw new Error('runName is required for getDatasetRun');
+      }
+
+      return {
+        path: `/datasets/${encodeURIComponent(datasetName)}/runs/${encodeURIComponent(runName)}`,
+        method: 'GET',
+      };
+    }
+    case 'deleteDatasetRun': {
+      const datasetName = asString(params.datasetName);
+      const runName = asString(params.runName);
+      if (datasetName === undefined) {
+        throw new Error('datasetName is required for deleteDatasetRun');
+      }
+      if (runName === undefined) {
+        throw new Error('runName is required for deleteDatasetRun');
+      }
+
+      return {
+        path: `/datasets/${encodeURIComponent(datasetName)}/runs/${encodeURIComponent(runName)}`,
+        method: 'DELETE',
+      };
+    }
+    case 'createDatasetRunItem': {
+      const runName = asString(params.runName);
+      const datasetItemId = asString(params.datasetItemId);
+      if (runName === undefined) {
+        throw new Error('runName is required for createDatasetRunItem');
+      }
+      if (datasetItemId === undefined) {
+        throw new Error('datasetItemId is required for createDatasetRunItem');
+      }
+
+      const body: Record<string, unknown> = { runName, datasetItemId };
+      const traceId = asString(params.traceId);
+      if (traceId !== undefined) body.traceId = traceId;
+      const observationId = asString(params.observationId);
+      if (observationId !== undefined) body.observationId = observationId;
+      const runDescription = asString(params.runDescription);
+      if (runDescription !== undefined) body.runDescription = runDescription;
+      const metadata = asRequestBody(params.metadataJson);
+      if (metadata !== undefined) body.metadata = metadata;
+
+      return {
+        path: '/dataset-run-items',
+        method: 'POST',
+        body,
       };
     }
     case 'customRequest': {

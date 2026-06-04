@@ -179,3 +179,159 @@ test('resolveLangfusePublicApiEndpoint omits empty customRequest body for GET re
     },
   );
 });
+
+// --- Datasets ---
+
+test('resolveLangfusePublicApiEndpoint resolves listDatasets with optional query', () => {
+  assert.deepEqual(
+    resolveLangfusePublicApiEndpoint('listDatasets', { queryJson: '{"page":1,"limit":5}' }),
+    { path: '/v2/datasets', method: 'GET', query: { page: 1, limit: 5 } },
+  );
+
+  assert.deepEqual(
+    resolveLangfusePublicApiEndpoint('listDatasets', {}),
+    { path: '/v2/datasets', method: 'GET' },
+  );
+});
+
+test('resolveLangfusePublicApiEndpoint resolves getDataset by name', () => {
+  assert.deepEqual(
+    resolveLangfusePublicApiEndpoint('getDataset', { datasetName: 'qa eval/set' }),
+    { path: '/v2/datasets/qa%20eval%2Fset', method: 'GET' },
+  );
+});
+
+test('resolveLangfusePublicApiEndpoint throws when getDataset has no datasetName', () => {
+  assert.throws(() => resolveLangfusePublicApiEndpoint('getDataset', {}), /datasetName is required/i);
+});
+
+test('resolveLangfusePublicApiEndpoint builds createDataset body', () => {
+  assert.deepEqual(
+    resolveLangfusePublicApiEndpoint('createDataset', {
+      datasetName: 'qa-set',
+      datasetDescription: 'eval set',
+      metadataJson: '{"team":"ml"}',
+    }),
+    {
+      path: '/v2/datasets',
+      method: 'POST',
+      body: { name: 'qa-set', description: 'eval set', metadata: { team: 'ml' } },
+    },
+  );
+
+  assert.deepEqual(
+    resolveLangfusePublicApiEndpoint('createDataset', { datasetName: 'qa-set' }),
+    { path: '/v2/datasets', method: 'POST', body: { name: 'qa-set' } },
+  );
+});
+
+test('resolveLangfusePublicApiEndpoint throws when createDataset has no datasetName', () => {
+  assert.throws(() => resolveLangfusePublicApiEndpoint('createDataset', {}), /datasetName is required/i);
+});
+
+// --- Dataset items ---
+
+test('resolveLangfusePublicApiEndpoint resolves listDatasetItems with query', () => {
+  assert.deepEqual(
+    resolveLangfusePublicApiEndpoint('listDatasetItems', { queryJson: '{"datasetName":"qa-set","limit":10}' }),
+    { path: '/dataset-items', method: 'GET', query: { datasetName: 'qa-set', limit: 10 } },
+  );
+});
+
+test('resolveLangfusePublicApiEndpoint resolves getDatasetItem and deleteDatasetItem by id', () => {
+  assert.deepEqual(
+    resolveLangfusePublicApiEndpoint('getDatasetItem', { datasetItemId: 'item-1' }),
+    { path: '/dataset-items/item-1', method: 'GET' },
+  );
+
+  assert.deepEqual(
+    resolveLangfusePublicApiEndpoint('deleteDatasetItem', { datasetItemId: 'item-1' }),
+    { path: '/dataset-items/item-1', method: 'DELETE' },
+  );
+});
+
+test('resolveLangfusePublicApiEndpoint throws when dataset item id is missing', () => {
+  assert.throws(() => resolveLangfusePublicApiEndpoint('getDatasetItem', {}), /datasetItemId is required/i);
+  assert.throws(() => resolveLangfusePublicApiEndpoint('deleteDatasetItem', {}), /datasetItemId is required/i);
+});
+
+test('resolveLangfusePublicApiEndpoint builds full createDatasetItem body', () => {
+  assert.deepEqual(
+    resolveLangfusePublicApiEndpoint('createDatasetItem', {
+      datasetName: 'qa-set',
+      inputJson: '{"q":"2+2"}',
+      expectedOutputJson: '{"a":"4"}',
+      metadataJson: '{"k":"v"}',
+      sourceTraceId: 'trace-1',
+      sourceObservationId: 'obs-1',
+      datasetItemId: 'item-1',
+      datasetItemStatus: 'ACTIVE',
+    }),
+    {
+      path: '/dataset-items',
+      method: 'POST',
+      body: {
+        datasetName: 'qa-set',
+        input: { q: '2+2' },
+        expectedOutput: { a: '4' },
+        metadata: { k: 'v' },
+        sourceTraceId: 'trace-1',
+        sourceObservationId: 'obs-1',
+        id: 'item-1',
+        status: 'ACTIVE',
+      },
+    },
+  );
+
+  assert.deepEqual(
+    resolveLangfusePublicApiEndpoint('createDatasetItem', { datasetName: 'qa-set' }),
+    { path: '/dataset-items', method: 'POST', body: { datasetName: 'qa-set' } },
+  );
+});
+
+// --- Dataset runs ---
+
+test('resolveLangfusePublicApiEndpoint resolves dataset runs under /datasets (not /v2)', () => {
+  assert.deepEqual(
+    resolveLangfusePublicApiEndpoint('listDatasetRuns', { datasetName: 'qa-set', queryJson: '{"page":2}' }),
+    { path: '/datasets/qa-set/runs', method: 'GET', query: { page: 2 } },
+  );
+
+  assert.deepEqual(
+    resolveLangfusePublicApiEndpoint('getDatasetRun', { datasetName: 'qa-set', runName: 'run-1' }),
+    { path: '/datasets/qa-set/runs/run-1', method: 'GET' },
+  );
+
+  assert.deepEqual(
+    resolveLangfusePublicApiEndpoint('deleteDatasetRun', { datasetName: 'qa-set', runName: 'run-1' }),
+    { path: '/datasets/qa-set/runs/run-1', method: 'DELETE' },
+  );
+});
+
+test('resolveLangfusePublicApiEndpoint throws when dataset run params are missing', () => {
+  assert.throws(() => resolveLangfusePublicApiEndpoint('listDatasetRuns', {}), /datasetName is required/i);
+  assert.throws(() => resolveLangfusePublicApiEndpoint('getDatasetRun', { datasetName: 'qa-set' }), /runName is required/i);
+  assert.throws(() => resolveLangfusePublicApiEndpoint('getDatasetRun', { runName: 'run-1' }), /datasetName is required/i);
+});
+
+test('resolveLangfusePublicApiEndpoint builds createDatasetRunItem body', () => {
+  assert.deepEqual(
+    resolveLangfusePublicApiEndpoint('createDatasetRunItem', {
+      runName: 'run-1',
+      datasetItemId: 'item-1',
+      traceId: 'trace-1',
+      runDescription: 'nightly',
+      metadataJson: '{"k":"v"}',
+    }),
+    {
+      path: '/dataset-run-items',
+      method: 'POST',
+      body: { runName: 'run-1', datasetItemId: 'item-1', traceId: 'trace-1', runDescription: 'nightly', metadata: { k: 'v' } },
+    },
+  );
+});
+
+test('resolveLangfusePublicApiEndpoint throws when createDatasetRunItem is missing required fields', () => {
+  assert.throws(() => resolveLangfusePublicApiEndpoint('createDatasetRunItem', { datasetItemId: 'item-1' }), /runName is required/i);
+  assert.throws(() => resolveLangfusePublicApiEndpoint('createDatasetRunItem', { runName: 'run-1' }), /datasetItemId is required/i);
+});
