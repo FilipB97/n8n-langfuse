@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Dataset evaluation example workflow** (`docs/example-eval-workflow.json`) — an
+  importable LLM evaluation loop that runs OpenAI over a set of test cases and
+  records traces, dataset items, dataset run items, and exact-match scores.
+
+### Changed
+
+- The node now sets `pairedItem` on every output, so multi-item workflows can
+  reliably reference per-item values across nodes (e.g. `$('Node').item`).
+
 ## [1.3.0] - 2026-06-04
 
 ### Added

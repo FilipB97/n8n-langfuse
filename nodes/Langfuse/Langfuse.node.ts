@@ -308,6 +308,7 @@ async function runExecute(this: LangfuseExecuteContext): Promise<Array<Array<Nod
             errors: response.errors,
             raw: response.raw,
           },
+          pairedItem: { item: itemIndex },
         });
         continue;
       }
@@ -337,6 +338,7 @@ async function runExecute(this: LangfuseExecuteContext): Promise<Array<Array<Nod
           data: response.data,
           raw: response.raw,
         },
+        pairedItem: { item: itemIndex },
       });
     } catch (error) {
       if (this.continueOnFail?.()) {
@@ -347,6 +349,7 @@ async function runExecute(this: LangfuseExecuteContext): Promise<Array<Array<Nod
             ok: false,
             error: asErrorMessage(error),
           },
+          pairedItem: { item: itemIndex },
         });
         continue;
       }
