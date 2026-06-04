@@ -70,6 +70,26 @@ npm run compile
 npm pack --dry-run
 ```
 
+## Wydania (release)
+
+Wydania sa sterowane tagiem. Aby wydac wersje `X.Y.Z`:
+
+1. Podbij `version` w `package.json`.
+2. W `CHANGELOG.md` przenies sekcje `## [Unreleased]` do `## [X.Y.Z] - <data>` i dodaj
+   link wersji na dole pliku.
+3. Zacommituj, wypchnij i zmerguj do `codex/initial-publish`.
+4. Utworz i wypchnij tag: `git tag vX.Y.Z <commit> && git push origin vX.Y.Z`.
+
+Tag uruchamia workflow `publish.yml`, ktory:
+
+- publikuje paczke na npm **idempotentnie** — jesli `name@version` juz istnieje na npm,
+  krok publikacji jest pomijany (tag nie powoduje wiec podwojnej publikacji),
+- tworzy **GitHub Release** dla tagu, z notatkami wyciaganymi z `CHANGELOG.md`
+  (`scripts/changelog-section.mjs`); jesli release dla tagu juz istnieje, krok jest pomijany.
+
+`workflow_dispatch` (reczne uruchomienie) publikuje idempotentnie, ale nie tworzy
+GitHub Release — release powstaje tylko przy pushu tagu.
+
 ## Instalacja w n8n lokalnie
 
 1. Zbuduj pakiet.

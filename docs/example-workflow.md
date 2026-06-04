@@ -1,58 +1,74 @@
-# Example workflow — full end-to-end demo
+# Example workflow — grouped demo
 
-[`example-workflow.json`](example-workflow.json) is an importable n8n workflow that exercises **every** operation of the Langfuse node (v2) in a single run, driven by a real OpenAI call.
+[`example-workflow.json`](example-workflow.json) is an importable n8n workflow
+that exercises the Langfuse node (v2). Instead of one long chain, it **fans out
+into four independent lanes** so the whole demo is readable at a glance.
 
-## What it does
+## Layout
 
 ```
-Manual Trigger
-  → Setup IDs (generates trace/span/generation/score ids + prompt)
-  → OpenAI Chat (@n8n/n8n-nodes-langchain.openAi)
-  → Trace Create
-  → Span Create → Span Update
-  → Generation Create → Generation Update → Finalize Span
-  → Score Create → Event Create → SDK Log → Batch Raw
-  → Wait 5s (let async ingestion flush)
-  → Health
-  → List Prompts → Get Prompt
-  → List Traces → Get Trace
-  → List Observations → Get Observation
-  → List Scores → Get Score → Delete Score
-  → List Sessions
-  → List Annotation Queues → Get Annotation Queue
-  → Custom Request
+Manual Trigger → Setup IDs → OpenAI Chat ┐
+                                         ├─ 1 · Ingestion   Trace → Span → Generation → Finalize → Score → Event → SDK Log → Batch Raw → Wait ─┐
+                                         ├─ 2 · Reads       Health · List Traces · List Observations · List Scores · List Sessions · List/Get Annotation Queue · Custom Request       │
+                                         ├─ 3 · Datasets    Create Dataset → Create Item → List Items → Create Run Item → List Runs → Get Run                                         │
+                                         ├─ 4 · Prompts     Create Prompt → List Prompts → Get Prompt                                                                                  │
+                                         └─ 5 · Verify  ←──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+                                              Get Trace → Get Observation → Get Score → Delete Score
 ```
 
-The OpenAI node makes a genuine LLM call; its prompt and full response are attached to the trace, the generation, and the finalized span — the same shape you would log in a real instrumentation workflow.
+Each lane sits on its own colored sticky-note background. `Setup IDs` generates
+the ids (`traceId`, `spanId`, `genId`, `scoreId`, `datasetName`, `datasetItemId`,
+`runName`, `prompt`) that every lane references, and `OpenAI Chat` makes a real
+LLM call whose response is logged on the trace, generation, and finalized span.
+
+## Why lanes
+
+The operations are not all related, so chaining them in one line was misleading
+and far too wide to read. Grouping them clarifies intent:
+
+- **Ingestion** is a genuine write sequence — it builds one trace (span, generation,
+  score, event, log, batch), then hands off to a 5-second Wait.
+- **Verify** sits in its own lane and only starts after the Wait, so it is clearly
+  the "read-back" phase: confirm Langfuse persisted what lane 1 wrote, then delete
+  the demo score.
+- **Reads**, **Datasets**, and **Prompts** are independent of the ingestion lane
+  and of each other, so they run in parallel from `OpenAI Chat`.
 
 ## Operations covered
 
-| Group | Operations |
+| Lane | Operations |
 | --- | --- |
-| Trace | Create, Get, List |
-| Span | Create, Update |
-| Generation | Create, Update, Finalize |
-| Score | Create, Get, List, Delete |
-| Prompt | List, Get |
-| Session | List |
-| Observation | List, Get |
-| Annotation Queue | List, Get |
-| System | Health, Event Create, SDK Log, Batch Raw, Custom Request |
+| Ingestion | Trace Create, Span Create/Update, Generation Create/Update, Finalize Span, Score Create, Event Create, SDK Log, Batch Raw |
+| Reads | Health, List Traces, List Observations, List Scores, List Sessions, List/Get Annotation Queue, Custom Request |
+| Datasets | Create Dataset, Create/List Dataset Item, Create Run Item, List/Get Dataset Run |
+| Prompts | Create Prompt, List Prompts, Get Prompt |
+| Verify | Get Trace, Get Observation, Get Score, Delete Score |
 
-All 24 node operations run in one execution.
+For a focused dataset evaluation loop, see
+[`example-eval-workflow.md`](example-eval-workflow.md).
 
 ## How to import
 
 1. Install the community node `n8n-nodes-langfuse-studio` (Settings → Community Nodes).
 2. In n8n: **Workflows → Import from File** and select `example-workflow.json`.
-3. Open each **Langfuse** node and select your **Langfuse API** credential (the import leaves a `REPLACE_LANGFUSE_CRED` placeholder).
-4. Open the **OpenAI Chat** node and select your **OpenAI** credential (placeholder `REPLACE_OPENAI_CRED`); adjust the model if you do not have `gpt-4o-mini`.
+3. Open each **Langfuse** node and select your **Langfuse API** credential
+   (placeholder `REPLACE_LANGFUSE_CRED`).
+4. Open **OpenAI Chat** and select your **OpenAI** credential
+   (placeholder `REPLACE_OPENAI_CRED`); adjust the model if needed.
 5. Click **Test workflow**.
 
 ## Design notes
 
-- **No single point of failure.** Every Langfuse node has *Continue On Error* enabled (`onError: continueRegularOutput`), so a failed read (for example a `404` on freshly-created data) never stops the chain — the run always reaches `Custom Request`.
-- **Async-safe.** Langfuse ingestion is asynchronous. The 5-second Wait gives the platform time to process the writes before the read operations query them. On very fast projects a few reads may still return `404`; that is expected, not a bug.
-- **Non-destructive.** `Delete Score` only deletes the demo score this run created (`scoreId` from *Setup IDs*), never an arbitrary existing score.
-- **Drill-down reads.** `Get Prompt` and `Get Annotation Queue` pull the first id from the preceding `List` node, so they work against whatever already exists in your project.
-- **v2 layout.** Nodes use `typeVersion: 2` (entity-based resources). Existing workflows on v1 keep working unchanged.
+- **No single point of failure.** Every Langfuse node has *Continue On Error*
+  enabled, so a failed read never stops its lane.
+- **Async-safe.** Langfuse ingestion is asynchronous; the 5-second Wait in lane 1
+  gives the platform time to process the writes before lane 5's round-trip reads.
+  A Get may still `404` on very fast runs — expected.
+- **Readable sequence.** Lane 1 ends cleanly at the Wait node; lane 5 shows the
+  verification phase as a separate, clearly-labelled strip rather than a long tail
+  tacked onto the end of the ingestion sequence.
+- **Non-destructive.** `Delete Score` only deletes the demo score this run created.
+- **Source of truth.** The JSON is generated by
+  [`scripts/gen-example-workflow.mjs`](../scripts/gen-example-workflow.mjs) —
+  edit the script and re-run `node scripts/gen-example-workflow.mjs` rather than
+  hand-editing the JSON.

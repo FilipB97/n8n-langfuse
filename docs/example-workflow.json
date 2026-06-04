@@ -1,51 +1,214 @@
 {
-  "name": "Langfuse Studio — Full Demo (OpenAI + all operations)",
+  "name": "Langfuse Studio — grouped demo",
   "nodes": [
     {
-      "parameters": {},
-      "id": "11111111-1111-4111-8111-111111111111",
-      "name": "Manual Trigger",
-      "type": "n8n-nodes-base.manualTrigger",
+      "parameters": {
+        "content": "## Langfuse Studio — grouped demo\n\nManual Trigger → **Setup IDs** → **OpenAI Chat**, then a fan-out into five lanes you can read at a glance:\n\n1. **Ingestion** — build a trace (span/generation/score/event/log/batch), then Wait.\n2. **Public API reads** — health and list endpoints over existing data.\n3. **Datasets** — create a dataset, item, and run item, then read the run.\n4. **Prompts** — create a prompt, list, and fetch it.\n5. **Round-trip verification** — reads back the trace/observation/score written in lane 1, then deletes the demo score.\n\n### Setup\n1. Install `n8n-nodes-langfuse-studio`.\n2. Set your **Langfuse API** credential on every Langfuse node.\n3. Set your **OpenAI** credential on OpenAI Chat.\n\nEvery Langfuse node uses *Continue On Error*, so one failure never stops a lane. Langfuse ingestion is async — a 5s Wait precedes the round-trip reads, but a Get may still 404 on very fast runs; that is expected.",
+        "height": 320,
+        "width": 460
+      },
+      "id": "3c03556d-f302-425c-b10d-2c5294ffee84",
+      "name": "README",
+      "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [-260, 300]
+      "position": [
+        -40,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 1 · Ingestion (writes + wait)",
+        "height": 200,
+        "width": 2700,
+        "color": 5
+      },
+      "id": "015e0499-28a6-4d62-ba51-95a71dc23d6f",
+      "name": "Lane: ingestion",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        640,
+        90
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 2 · Public API reads (existing data)",
+        "height": 200,
+        "width": 1980,
+        "color": 4
+      },
+      "id": "795f50c3-41b4-43fa-a9ab-b6cab913473a",
+      "name": "Lane: reads",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        640,
+        310
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 3 · Datasets (evaluation building blocks)",
+        "height": 200,
+        "width": 1500,
+        "color": 3
+      },
+      "id": "4306a19f-4724-4e3b-9ee1-001c78e276a1",
+      "name": "Lane: datasets",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        640,
+        530
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 4 · Prompts (create → list → get)",
+        "height": 200,
+        "width": 780,
+        "color": 6
+      },
+      "id": "03b6243a-dd56-4853-bdb5-7800f7ba24d0",
+      "name": "Lane: prompts",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        640,
+        750
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 5 · Round-trip verification (Get / Delete)",
+        "height": 200,
+        "width": 1020,
+        "color": 5
+      },
+      "id": "0aa352de-647b-4cd2-afba-df385701744c",
+      "name": "Lane: verify",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3280,
+        970
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "e158e2ce-ef1c-4217-b340-e56693f12a1a",
+      "name": "Manual Trigger",
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1
     },
     {
       "parameters": {
         "assignments": {
           "assignments": [
-            { "id": "a1", "name": "traceId", "value": "=n8n-demo-{{ $now.toMillis() }}", "type": "string" },
-            { "id": "a2", "name": "sessionId", "value": "=n8n-session-{{ $now.toFormat('yyyy-LL-dd') }}", "type": "string" },
-            { "id": "a3", "name": "spanId", "value": "=span-{{ $now.toMillis() }}", "type": "string" },
-            { "id": "a4", "name": "genId", "value": "=gen-{{ $now.toMillis() }}", "type": "string" },
-            { "id": "a5", "name": "scoreId", "value": "=score-{{ $now.toMillis() }}", "type": "string" },
-            { "id": "a6", "name": "prompt", "value": "Explain in one sentence why observability matters for LLM applications.", "type": "string" }
+            {
+              "id": "a1",
+              "name": "traceId",
+              "value": "=n8n-demo-{{ $now.toMillis() }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "sessionId",
+              "value": "=n8n-session-{{ $now.toFormat('yyyy-LL-dd') }}",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "spanId",
+              "value": "=span-{{ $now.toMillis() }}",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "genId",
+              "value": "=gen-{{ $now.toMillis() }}",
+              "type": "string"
+            },
+            {
+              "id": "a5",
+              "name": "scoreId",
+              "value": "=score-{{ $now.toMillis() }}",
+              "type": "string"
+            },
+            {
+              "id": "a6",
+              "name": "datasetName",
+              "value": "n8n-demo-dataset",
+              "type": "string"
+            },
+            {
+              "id": "a7",
+              "name": "datasetItemId",
+              "value": "=demo-item-{{ $now.toMillis() }}",
+              "type": "string"
+            },
+            {
+              "id": "a8",
+              "name": "runName",
+              "value": "=run-{{ $now.toMillis() }}",
+              "type": "string"
+            },
+            {
+              "id": "a9",
+              "name": "prompt",
+              "value": "Explain in one sentence why observability matters for LLM applications.",
+              "type": "string"
+            }
           ]
         },
         "options": {}
       },
-      "id": "22222222-2222-4222-8222-222222222222",
+      "id": "24852670-4802-453e-b1da-b5223f78ef71",
       "name": "Setup IDs",
+      "position": [
+        240,
+        0
+      ],
       "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [-40, 300]
+      "typeVersion": 3.4
     },
     {
       "parameters": {
-        "modelId": { "__rl": true, "value": "gpt-4o-mini", "mode": "list", "cachedResultName": "gpt-4o-mini" },
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
         "messages": {
           "values": [
-            { "content": "={{ $json.prompt }}", "role": "user" }
+            {
+              "content": "={{ $json.prompt }}",
+              "role": "user"
+            }
           ]
         },
         "options": {}
       },
-      "id": "33333333-3333-4333-8333-333333333333",
+      "id": "317f3d77-cb4a-4b8d-ab05-b6a56893caea",
       "name": "OpenAI Chat",
+      "position": [
+        480,
+        0
+      ],
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.8,
-      "position": [180, 300],
       "credentials": {
-        "openAiApi": { "id": "REPLACE_OPENAI_CRED", "name": "OpenAi account" }
+        "openAiApi": {
+          "id": "REPLACE_OPENAI_CRED",
+          "name": "OpenAi account"
+        }
       },
       "onError": "continueRegularOutput"
     },
@@ -63,13 +226,19 @@
         "environment": "production",
         "metadataJson": "{\"source\":\"n8n\",\"demo\":\"langfuse-studio\"}"
       },
-      "id": "44444444-4444-4444-8444-444444444444",
+      "id": "75967d5e-d6ed-46ae-9eb5-557f120f4328",
       "name": "Trace Create",
+      "position": [
+        720,
+        200
+      ],
       "type": "n8n-nodes-langfuse-studio.langfuse",
       "typeVersion": 2,
-      "position": [400, 300],
       "credentials": {
-        "langfuseApi": { "id": "REPLACE_LANGFUSE_CRED", "name": "Langfuse account" }
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
       },
       "onError": "continueRegularOutput"
     },
@@ -85,13 +254,19 @@
         "startTime": "={{ $now.toISO() }}",
         "environment": "production"
       },
-      "id": "55555555-5555-4555-8555-555555555555",
+      "id": "18693778-b6e0-4d1e-a43e-d65ec64d2a6a",
       "name": "Span Create",
+      "position": [
+        960,
+        200
+      ],
       "type": "n8n-nodes-langfuse-studio.langfuse",
       "typeVersion": 2,
-      "position": [620, 300],
       "credentials": {
-        "langfuseApi": { "id": "REPLACE_LANGFUSE_CRED", "name": "Langfuse account" }
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
       },
       "onError": "continueRegularOutput"
     },
@@ -108,13 +283,19 @@
         "statusMessage": "completed",
         "outputJson": "{\"status\":\"ok\"}"
       },
-      "id": "66666666-6666-4666-8666-666666666666",
+      "id": "986775c9-92d9-4451-9b16-2a558cfdb2e2",
       "name": "Span Update",
+      "position": [
+        1200,
+        200
+      ],
       "type": "n8n-nodes-langfuse-studio.langfuse",
       "typeVersion": 2,
-      "position": [840, 300],
       "credentials": {
-        "langfuseApi": { "id": "REPLACE_LANGFUSE_CRED", "name": "Langfuse account" }
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
       },
       "onError": "continueRegularOutput"
     },
@@ -135,13 +316,19 @@
         "usageDetailsJson": "={{ JSON.stringify($('OpenAI Chat').item.json.usage ?? $('OpenAI Chat').item.json.tokenUsage ?? {}) }}",
         "modelParametersJson": "{\"temperature\":0.7}"
       },
-      "id": "77777777-7777-4777-8777-777777777777",
+      "id": "71b4eed4-06f9-414f-a8e8-e8c3dd996a6d",
       "name": "Generation Create",
+      "position": [
+        1440,
+        200
+      ],
       "type": "n8n-nodes-langfuse-studio.langfuse",
       "typeVersion": 2,
-      "position": [1060, 300],
       "credentials": {
-        "langfuseApi": { "id": "REPLACE_LANGFUSE_CRED", "name": "Langfuse account" }
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
       },
       "onError": "continueRegularOutput"
     },
@@ -158,13 +345,19 @@
         "endTime": "={{ $now.toISO() }}",
         "costDetailsJson": "{\"total_cost\":0.0001}"
       },
-      "id": "88888888-8888-4888-8888-888888888888",
+      "id": "c7abf4e2-9c18-4248-87f6-4effb155ebd5",
       "name": "Generation Update",
+      "position": [
+        1680,
+        200
+      ],
       "type": "n8n-nodes-langfuse-studio.langfuse",
       "typeVersion": 2,
-      "position": [1280, 300],
       "credentials": {
-        "langfuseApi": { "id": "REPLACE_LANGFUSE_CRED", "name": "Langfuse account" }
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
       },
       "onError": "continueRegularOutput"
     },
@@ -175,7 +368,7 @@
         "traceId": "={{ $('Setup IDs').item.json.traceId }}",
         "name": "llm-response",
         "model": "gpt-4o-mini",
-        "promptName": "answer-query",
+        "promptName": "n8n-demo-prompt",
         "promptVersion": "1",
         "inputJson": "={{ JSON.stringify({ prompt: $('Setup IDs').item.json.prompt }) }}",
         "outputJson": "={{ JSON.stringify($('OpenAI Chat').item.json) }}",
@@ -183,13 +376,19 @@
         "observationId": "={{ $('Setup IDs').item.json.spanId }}",
         "endTime": "={{ $now.toISO() }}"
       },
-      "id": "99999999-9999-4999-8999-999999999999",
+      "id": "c8c54f8d-bfdd-4ab5-ba0d-f3fc4bbe2ccc",
       "name": "Finalize Span",
+      "position": [
+        1920,
+        200
+      ],
       "type": "n8n-nodes-langfuse-studio.langfuse",
       "typeVersion": 2,
-      "position": [1500, 300],
       "credentials": {
-        "langfuseApi": { "id": "REPLACE_LANGFUSE_CRED", "name": "Langfuse account" }
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
       },
       "onError": "continueRegularOutput"
     },
@@ -206,13 +405,19 @@
         "scoreComment": "Automated demo score",
         "scoreEnvironment": "production"
       },
-      "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "id": "b302dbc9-88c4-4fd0-ae47-afb348892520",
       "name": "Score Create",
+      "position": [
+        2160,
+        200
+      ],
       "type": "n8n-nodes-langfuse-studio.langfuse",
       "typeVersion": 2,
-      "position": [1720, 300],
       "credentials": {
-        "langfuseApi": { "id": "REPLACE_LANGFUSE_CRED", "name": "Langfuse account" }
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
       },
       "onError": "continueRegularOutput"
     },
@@ -228,13 +433,19 @@
         "environment": "production",
         "metadataJson": "{\"step\":\"event-demo\"}"
       },
-      "id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "id": "a235b317-dfcd-4046-81ff-91e41e1ef9c1",
       "name": "Event Create",
+      "position": [
+        2400,
+        200
+      ],
       "type": "n8n-nodes-langfuse-studio.langfuse",
       "typeVersion": 2,
-      "position": [1940, 300],
       "credentials": {
-        "langfuseApi": { "id": "REPLACE_LANGFUSE_CRED", "name": "Langfuse account" }
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
       },
       "onError": "continueRegularOutput"
     },
@@ -248,13 +459,19 @@
         "showAdvancedFields": true,
         "metadataJson": "{\"component\":\"n8n\"}"
       },
-      "id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "id": "36ecf205-9a9d-493b-8882-49d795fe525c",
       "name": "SDK Log",
+      "position": [
+        2640,
+        200
+      ],
       "type": "n8n-nodes-langfuse-studio.langfuse",
       "typeVersion": 2,
-      "position": [2160, 300],
       "credentials": {
-        "langfuseApi": { "id": "REPLACE_LANGFUSE_CRED", "name": "Langfuse account" }
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
       },
       "onError": "continueRegularOutput"
     },
@@ -264,13 +481,19 @@
         "operation": "batchRaw",
         "batchJson": "={{ JSON.stringify({ batch: [ { id: 'evt-' + $now.toMillis(), type: 'event-create', timestamp: $now.toISO(), body: { id: 'batch-' + $now.toMillis(), traceId: $('Setup IDs').item.json.traceId, name: 'raw-batch-event' } } ] }) }}"
       },
-      "id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      "id": "fcfc2382-ac29-4e47-91cc-3684bca69709",
       "name": "Batch Raw",
+      "position": [
+        2880,
+        200
+      ],
       "type": "n8n-nodes-langfuse-studio.langfuse",
       "typeVersion": 2,
-      "position": [2380, 300],
       "credentials": {
-        "langfuseApi": { "id": "REPLACE_LANGFUSE_CRED", "name": "Langfuse account" }
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
       },
       "onError": "continueRegularOutput"
     },
@@ -278,58 +501,33 @@
       "parameters": {
         "amount": 5
       },
-      "id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+      "id": "67fecadd-fa91-480d-9754-d2faaf1b8ca8",
       "name": "Wait for Ingestion",
+      "position": [
+        3120,
+        200
+      ],
       "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
-      "position": [2600, 300],
-      "webhookId": "langfuse-demo-wait"
+      "typeVersion": 1.1
     },
     {
       "parameters": {
         "resource": "system",
         "operation": "health"
       },
-      "id": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+      "id": "423c82ce-6492-40db-b150-6579bb13e9df",
       "name": "Health",
+      "position": [
+        720,
+        420
+      ],
       "type": "n8n-nodes-langfuse-studio.langfuse",
       "typeVersion": 2,
-      "position": [2820, 300],
       "credentials": {
-        "langfuseApi": { "id": "REPLACE_LANGFUSE_CRED", "name": "Langfuse account" }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "resource": "prompt",
-        "operation": "listPrompts",
-        "showAdvancedFields": true,
-        "queryJson": "{\"limit\":5}"
-      },
-      "id": "10101010-1010-4101-8101-101010101010",
-      "name": "List Prompts",
-      "type": "n8n-nodes-langfuse-studio.langfuse",
-      "typeVersion": 2,
-      "position": [3040, 300],
-      "credentials": {
-        "langfuseApi": { "id": "REPLACE_LANGFUSE_CRED", "name": "Langfuse account" }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "resource": "prompt",
-        "operation": "getPrompt",
-        "promptName": "={{ $json.data?.[0]?.name }}"
-      },
-      "id": "12121212-1212-4121-8121-121212121212",
-      "name": "Get Prompt",
-      "type": "n8n-nodes-langfuse-studio.langfuse",
-      "typeVersion": 2,
-      "position": [3260, 300],
-      "credentials": {
-        "langfuseApi": { "id": "REPLACE_LANGFUSE_CRED", "name": "Langfuse account" }
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
       },
       "onError": "continueRegularOutput"
     },
@@ -340,29 +538,19 @@
         "showAdvancedFields": true,
         "queryJson": "{\"limit\":5}"
       },
-      "id": "13131313-1313-4131-8131-131313131313",
+      "id": "ee2dd2f1-7db8-4cee-8c10-b3f2db5d0428",
       "name": "List Traces",
+      "position": [
+        960,
+        420
+      ],
       "type": "n8n-nodes-langfuse-studio.langfuse",
       "typeVersion": 2,
-      "position": [3480, 300],
       "credentials": {
-        "langfuseApi": { "id": "REPLACE_LANGFUSE_CRED", "name": "Langfuse account" }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "resource": "trace",
-        "operation": "getTrace",
-        "traceId": "={{ $('Setup IDs').item.json.traceId }}"
-      },
-      "id": "14141414-1414-4141-8141-141414141414",
-      "name": "Get Trace",
-      "type": "n8n-nodes-langfuse-studio.langfuse",
-      "typeVersion": 2,
-      "position": [3700, 300],
-      "credentials": {
-        "langfuseApi": { "id": "REPLACE_LANGFUSE_CRED", "name": "Langfuse account" }
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
       },
       "onError": "continueRegularOutput"
     },
@@ -373,29 +561,19 @@
         "showAdvancedFields": true,
         "queryJson": "{\"limit\":5}"
       },
-      "id": "15151515-1515-4151-8151-151515151515",
+      "id": "87f21a23-8076-43b8-bbe9-6286df5302d1",
       "name": "List Observations",
+      "position": [
+        1200,
+        420
+      ],
       "type": "n8n-nodes-langfuse-studio.langfuse",
       "typeVersion": 2,
-      "position": [3920, 300],
       "credentials": {
-        "langfuseApi": { "id": "REPLACE_LANGFUSE_CRED", "name": "Langfuse account" }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "resource": "observation",
-        "operation": "getObservation",
-        "observationId": "={{ $('Setup IDs').item.json.spanId }}"
-      },
-      "id": "16161616-1616-4161-8161-161616161616",
-      "name": "Get Observation",
-      "type": "n8n-nodes-langfuse-studio.langfuse",
-      "typeVersion": 2,
-      "position": [4140, 300],
-      "credentials": {
-        "langfuseApi": { "id": "REPLACE_LANGFUSE_CRED", "name": "Langfuse account" }
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
       },
       "onError": "continueRegularOutput"
     },
@@ -406,45 +584,19 @@
         "showAdvancedFields": true,
         "queryJson": "{\"limit\":5}"
       },
-      "id": "17171717-1717-4171-8171-171717171717",
+      "id": "9937c42c-9087-4248-a9dd-a16998b24c71",
       "name": "List Scores",
+      "position": [
+        1440,
+        420
+      ],
       "type": "n8n-nodes-langfuse-studio.langfuse",
       "typeVersion": 2,
-      "position": [4360, 300],
       "credentials": {
-        "langfuseApi": { "id": "REPLACE_LANGFUSE_CRED", "name": "Langfuse account" }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "resource": "score",
-        "operation": "getScore",
-        "scoreId": "={{ $('Setup IDs').item.json.scoreId }}"
-      },
-      "id": "18181818-1818-4181-8181-181818181818",
-      "name": "Get Score",
-      "type": "n8n-nodes-langfuse-studio.langfuse",
-      "typeVersion": 2,
-      "position": [4580, 300],
-      "credentials": {
-        "langfuseApi": { "id": "REPLACE_LANGFUSE_CRED", "name": "Langfuse account" }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "resource": "score",
-        "operation": "deleteScore",
-        "scoreId": "={{ $('Setup IDs').item.json.scoreId }}"
-      },
-      "id": "19191919-1919-4191-8191-191919191919",
-      "name": "Delete Score",
-      "type": "n8n-nodes-langfuse-studio.langfuse",
-      "typeVersion": 2,
-      "position": [4800, 300],
-      "credentials": {
-        "langfuseApi": { "id": "REPLACE_LANGFUSE_CRED", "name": "Langfuse account" }
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
       },
       "onError": "continueRegularOutput"
     },
@@ -455,13 +607,19 @@
         "showAdvancedFields": true,
         "queryJson": "{\"limit\":5}"
       },
-      "id": "20202020-2020-4202-8202-202020202020",
+      "id": "a950bff2-de1d-4d49-983d-6ede18ecec45",
       "name": "List Sessions",
+      "position": [
+        1680,
+        420
+      ],
       "type": "n8n-nodes-langfuse-studio.langfuse",
       "typeVersion": 2,
-      "position": [5020, 300],
       "credentials": {
-        "langfuseApi": { "id": "REPLACE_LANGFUSE_CRED", "name": "Langfuse account" }
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
       },
       "onError": "continueRegularOutput"
     },
@@ -472,13 +630,19 @@
         "showAdvancedFields": true,
         "queryJson": "{\"limit\":5}"
       },
-      "id": "21212121-2121-4212-8212-212121212121",
+      "id": "78ad89d7-3af9-41a2-8b19-9261d82d9df0",
       "name": "List Annotation Queues",
+      "position": [
+        1920,
+        420
+      ],
       "type": "n8n-nodes-langfuse-studio.langfuse",
       "typeVersion": 2,
-      "position": [5240, 300],
       "credentials": {
-        "langfuseApi": { "id": "REPLACE_LANGFUSE_CRED", "name": "Langfuse account" }
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
       },
       "onError": "continueRegularOutput"
     },
@@ -488,13 +652,19 @@
         "operation": "getAnnotationQueue",
         "queueId": "={{ $json.data?.[0]?.id }}"
       },
-      "id": "23232323-2323-4232-8232-232323232323",
+      "id": "316a89d2-5e04-4f91-8dc7-2e92861b44be",
       "name": "Get Annotation Queue",
+      "position": [
+        2160,
+        420
+      ],
       "type": "n8n-nodes-langfuse-studio.langfuse",
       "typeVersion": 2,
-      "position": [5460, 300],
       "credentials": {
-        "langfuseApi": { "id": "REPLACE_LANGFUSE_CRED", "name": "Langfuse account" }
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
       },
       "onError": "continueRegularOutput"
     },
@@ -507,58 +677,685 @@
         "showAdvancedFields": true,
         "queryJson": "{\"limit\":1}"
       },
-      "id": "24242424-2424-4242-8242-242424242424",
+      "id": "12feb188-d813-4989-9a8b-7a828664667a",
       "name": "Custom Request",
+      "position": [
+        2400,
+        420
+      ],
       "type": "n8n-nodes-langfuse-studio.langfuse",
       "typeVersion": 2,
-      "position": [5680, 300],
       "credentials": {
-        "langfuseApi": { "id": "REPLACE_LANGFUSE_CRED", "name": "Langfuse account" }
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
       },
       "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "content": "## Langfuse Studio — Full Demo\n\nThis workflow exercises **every** operation of the Langfuse node (v2) end-to-end:\n\n**Ingestion (writes):** Trace → Span (create/update) → Generation (create/update) → Finalize Span → Score → Event → SDK Log → Batch Raw.\n\n**Public API (reads):** Health, List/Get Prompt, List/Get Trace, List/Get Observation, List/Get/Delete Score, List Sessions, List/Get Annotation Queue, Custom Request.\n\n### Before running\n1. Install the community node `n8n-nodes-langfuse-studio`.\n2. Create **Langfuse API** credentials and select them on every Langfuse node.\n3. Select your **OpenAI** credentials on the OpenAI Chat node.\n\n### Notes\n- Every node uses *Continue On Error*, so one failure never stops the run.\n- A 5s Wait sits between writes and reads so freshly-ingested data has time to flush. Langfuse ingestion is async — Get Trace/Observation/Score may still 404 on very fast runs; that is expected.\n- Delete Score only removes the demo score this run created (safe, non-destructive).",
-        "height": 460,
-        "width": 520
+        "resource": "dataset",
+        "operation": "createDataset",
+        "datasetName": "={{ $('Setup IDs').item.json.datasetName }}",
+        "showAdvancedFields": true,
+        "datasetDescription": "Demo dataset created from n8n"
       },
-      "id": "25252525-2525-4252-8252-252525252525",
-      "name": "README",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [-260, -240]
+      "id": "75834c02-4e6e-422e-b508-7542c87ecc36",
+      "name": "Create Dataset",
+      "position": [
+        720,
+        640
+      ],
+      "type": "n8n-nodes-langfuse-studio.langfuse",
+      "typeVersion": 2,
+      "credentials": {
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "datasetItem",
+        "operation": "createDatasetItem",
+        "datasetName": "={{ $('Setup IDs').item.json.datasetName }}",
+        "inputJson": "={{ JSON.stringify({ prompt: $('Setup IDs').item.json.prompt }) }}",
+        "expectedOutputJson": "{\"answer\":\"observability matters\"}",
+        "showAdvancedFields": true,
+        "datasetItemId": "={{ $('Setup IDs').item.json.datasetItemId }}"
+      },
+      "id": "b819e94d-d863-4735-b930-8430d8c4281b",
+      "name": "Create Dataset Item",
+      "position": [
+        960,
+        640
+      ],
+      "type": "n8n-nodes-langfuse-studio.langfuse",
+      "typeVersion": 2,
+      "credentials": {
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "datasetItem",
+        "operation": "listDatasetItems",
+        "showAdvancedFields": true,
+        "queryJson": "={{ JSON.stringify({ datasetName: $('Setup IDs').item.json.datasetName, limit: 5 }) }}"
+      },
+      "id": "a5ec8828-4f41-4897-a392-ea7e846f8b51",
+      "name": "List Dataset Items",
+      "position": [
+        1200,
+        640
+      ],
+      "type": "n8n-nodes-langfuse-studio.langfuse",
+      "typeVersion": 2,
+      "credentials": {
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "datasetRun",
+        "operation": "createDatasetRunItem",
+        "runName": "={{ $('Setup IDs').item.json.runName }}",
+        "datasetItemId": "={{ $('Setup IDs').item.json.datasetItemId }}",
+        "traceId": "={{ $('Setup IDs').item.json.traceId }}"
+      },
+      "id": "965ef63d-981b-4ab8-b5cf-a281f9324e13",
+      "name": "Create Run Item",
+      "position": [
+        1440,
+        640
+      ],
+      "type": "n8n-nodes-langfuse-studio.langfuse",
+      "typeVersion": 2,
+      "credentials": {
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "datasetRun",
+        "operation": "listDatasetRuns",
+        "datasetName": "={{ $('Setup IDs').item.json.datasetName }}"
+      },
+      "id": "3b4f32a7-6560-4f60-b270-200f59cd7ff0",
+      "name": "List Dataset Runs",
+      "position": [
+        1680,
+        640
+      ],
+      "type": "n8n-nodes-langfuse-studio.langfuse",
+      "typeVersion": 2,
+      "credentials": {
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "datasetRun",
+        "operation": "getDatasetRun",
+        "datasetName": "={{ $('Setup IDs').item.json.datasetName }}",
+        "runName": "={{ $('Setup IDs').item.json.runName }}"
+      },
+      "id": "5b169321-c8c7-439a-bc8d-b94ffe97e5f2",
+      "name": "Get Dataset Run",
+      "position": [
+        1920,
+        640
+      ],
+      "type": "n8n-nodes-langfuse-studio.langfuse",
+      "typeVersion": 2,
+      "credentials": {
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "prompt",
+        "operation": "createPrompt",
+        "promptName": "n8n-demo-prompt",
+        "promptType": "text",
+        "promptText": "Answer the question: {{question}}",
+        "showAdvancedFields": true,
+        "promptLabels": "production",
+        "promptCommitMessage": "created from the n8n demo"
+      },
+      "id": "42077db0-fda1-4e77-92c3-e0fdbf1ef9ec",
+      "name": "Create Prompt",
+      "position": [
+        720,
+        860
+      ],
+      "type": "n8n-nodes-langfuse-studio.langfuse",
+      "typeVersion": 2,
+      "credentials": {
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "prompt",
+        "operation": "listPrompts",
+        "showAdvancedFields": true,
+        "queryJson": "{\"limit\":5}"
+      },
+      "id": "87fc333f-d6d7-4de8-9224-31d430beb2e3",
+      "name": "List Prompts",
+      "position": [
+        960,
+        860
+      ],
+      "type": "n8n-nodes-langfuse-studio.langfuse",
+      "typeVersion": 2,
+      "credentials": {
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "prompt",
+        "operation": "getPrompt",
+        "promptName": "={{ $json.data?.[0]?.name }}"
+      },
+      "id": "c7802e25-dfb7-46d6-baf9-6808ded94841",
+      "name": "Get Prompt",
+      "position": [
+        1200,
+        860
+      ],
+      "type": "n8n-nodes-langfuse-studio.langfuse",
+      "typeVersion": 2,
+      "credentials": {
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "trace",
+        "operation": "getTrace",
+        "traceId": "={{ $('Setup IDs').item.json.traceId }}"
+      },
+      "id": "5c76e417-03b1-4072-8076-60d93ec058a2",
+      "name": "Get Trace",
+      "position": [
+        3360,
+        1080
+      ],
+      "type": "n8n-nodes-langfuse-studio.langfuse",
+      "typeVersion": 2,
+      "credentials": {
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "observation",
+        "operation": "getObservation",
+        "observationId": "={{ $('Setup IDs').item.json.spanId }}"
+      },
+      "id": "715ad679-dee1-41c1-bfd8-7f77ecb3ff69",
+      "name": "Get Observation",
+      "position": [
+        3600,
+        1080
+      ],
+      "type": "n8n-nodes-langfuse-studio.langfuse",
+      "typeVersion": 2,
+      "credentials": {
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "score",
+        "operation": "getScore",
+        "scoreId": "={{ $('Setup IDs').item.json.scoreId }}"
+      },
+      "id": "c6420639-5dfe-4572-9897-1e0729bb292d",
+      "name": "Get Score",
+      "position": [
+        3840,
+        1080
+      ],
+      "type": "n8n-nodes-langfuse-studio.langfuse",
+      "typeVersion": 2,
+      "credentials": {
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "score",
+        "operation": "deleteScore",
+        "scoreId": "={{ $('Setup IDs').item.json.scoreId }}"
+      },
+      "id": "ca24907c-d129-434d-bbc1-777df8ac9823",
+      "name": "Delete Score",
+      "position": [
+        4080,
+        1080
+      ],
+      "type": "n8n-nodes-langfuse-studio.langfuse",
+      "typeVersion": 2,
+      "credentials": {
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
+      },
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
-    "Manual Trigger": { "main": [[{ "node": "Setup IDs", "type": "main", "index": 0 }]] },
-    "Setup IDs": { "main": [[{ "node": "OpenAI Chat", "type": "main", "index": 0 }]] },
-    "OpenAI Chat": { "main": [[{ "node": "Trace Create", "type": "main", "index": 0 }]] },
-    "Trace Create": { "main": [[{ "node": "Span Create", "type": "main", "index": 0 }]] },
-    "Span Create": { "main": [[{ "node": "Span Update", "type": "main", "index": 0 }]] },
-    "Span Update": { "main": [[{ "node": "Generation Create", "type": "main", "index": 0 }]] },
-    "Generation Create": { "main": [[{ "node": "Generation Update", "type": "main", "index": 0 }]] },
-    "Generation Update": { "main": [[{ "node": "Finalize Span", "type": "main", "index": 0 }]] },
-    "Finalize Span": { "main": [[{ "node": "Score Create", "type": "main", "index": 0 }]] },
-    "Score Create": { "main": [[{ "node": "Event Create", "type": "main", "index": 0 }]] },
-    "Event Create": { "main": [[{ "node": "SDK Log", "type": "main", "index": 0 }]] },
-    "SDK Log": { "main": [[{ "node": "Batch Raw", "type": "main", "index": 0 }]] },
-    "Batch Raw": { "main": [[{ "node": "Wait for Ingestion", "type": "main", "index": 0 }]] },
-    "Wait for Ingestion": { "main": [[{ "node": "Health", "type": "main", "index": 0 }]] },
-    "Health": { "main": [[{ "node": "List Prompts", "type": "main", "index": 0 }]] },
-    "List Prompts": { "main": [[{ "node": "Get Prompt", "type": "main", "index": 0 }]] },
-    "Get Prompt": { "main": [[{ "node": "List Traces", "type": "main", "index": 0 }]] },
-    "List Traces": { "main": [[{ "node": "Get Trace", "type": "main", "index": 0 }]] },
-    "Get Trace": { "main": [[{ "node": "List Observations", "type": "main", "index": 0 }]] },
-    "List Observations": { "main": [[{ "node": "Get Observation", "type": "main", "index": 0 }]] },
-    "Get Observation": { "main": [[{ "node": "List Scores", "type": "main", "index": 0 }]] },
-    "List Scores": { "main": [[{ "node": "Get Score", "type": "main", "index": 0 }]] },
-    "Get Score": { "main": [[{ "node": "Delete Score", "type": "main", "index": 0 }]] },
-    "Delete Score": { "main": [[{ "node": "List Sessions", "type": "main", "index": 0 }]] },
-    "List Sessions": { "main": [[{ "node": "List Annotation Queues", "type": "main", "index": 0 }]] },
-    "List Annotation Queues": { "main": [[{ "node": "Get Annotation Queue", "type": "main", "index": 0 }]] },
-    "Get Annotation Queue": { "main": [[{ "node": "Custom Request", "type": "main", "index": 0 }]] }
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Setup IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Setup IDs": {
+      "main": [
+        [
+          {
+            "node": "OpenAI Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat": {
+      "main": [
+        [
+          {
+            "node": "Trace Create",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Health",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create Dataset",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trace Create": {
+      "main": [
+        [
+          {
+            "node": "Span Create",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Span Create": {
+      "main": [
+        [
+          {
+            "node": "Span Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Span Update": {
+      "main": [
+        [
+          {
+            "node": "Generation Create",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generation Create": {
+      "main": [
+        [
+          {
+            "node": "Generation Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generation Update": {
+      "main": [
+        [
+          {
+            "node": "Finalize Span",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Finalize Span": {
+      "main": [
+        [
+          {
+            "node": "Score Create",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score Create": {
+      "main": [
+        [
+          {
+            "node": "Event Create",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Event Create": {
+      "main": [
+        [
+          {
+            "node": "SDK Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SDK Log": {
+      "main": [
+        [
+          {
+            "node": "Batch Raw",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Batch Raw": {
+      "main": [
+        [
+          {
+            "node": "Wait for Ingestion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Health": {
+      "main": [
+        [
+          {
+            "node": "List Traces",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Traces": {
+      "main": [
+        [
+          {
+            "node": "List Observations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Observations": {
+      "main": [
+        [
+          {
+            "node": "List Scores",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Scores": {
+      "main": [
+        [
+          {
+            "node": "List Sessions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Sessions": {
+      "main": [
+        [
+          {
+            "node": "List Annotation Queues",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Annotation Queues": {
+      "main": [
+        [
+          {
+            "node": "Get Annotation Queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Annotation Queue": {
+      "main": [
+        [
+          {
+            "node": "Custom Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Dataset": {
+      "main": [
+        [
+          {
+            "node": "Create Dataset Item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Dataset Item": {
+      "main": [
+        [
+          {
+            "node": "List Dataset Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Dataset Items": {
+      "main": [
+        [
+          {
+            "node": "Create Run Item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Run Item": {
+      "main": [
+        [
+          {
+            "node": "List Dataset Runs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Dataset Runs": {
+      "main": [
+        [
+          {
+            "node": "Get Dataset Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Prompt": {
+      "main": [
+        [
+          {
+            "node": "List Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Prompts": {
+      "main": [
+        [
+          {
+            "node": "Get Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Trace": {
+      "main": [
+        [
+          {
+            "node": "Get Observation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Observation": {
+      "main": [
+        [
+          {
+            "node": "Get Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Score": {
+      "main": [
+        [
+          {
+            "node": "Delete Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Ingestion": {
+      "main": [
+        [
+          {
+            "node": "Get Trace",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
-  "settings": { "executionOrder": "v1" },
-  "pinData": {}
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
 }
