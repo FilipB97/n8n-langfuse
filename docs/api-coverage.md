@@ -15,6 +15,8 @@ This coverage map applies to the unified `Langfuse` node when you choose `Resour
 | `SDK Log Create` | `sdk-log` | `sdkMessage` | `traceId`, `observationId`, `parentObservationId`, `sdkLevel`, `name`, `metadataJson`, `timestamp`, `eventId` | Lightweight diagnostic event |
 | `Batch Raw` | raw batch payload | `batchJson` | none - payload is sent as-is | Useful when another system already built the Langfuse batch |
 
+All ingestion create operations (`Trace Create`, `Span Create`, `Generation Create`, `Event Create`) also accept an optional `environment` label.
+
 ## Shared behavior
 
 - `Base URL` from the credential is normalized by removing a trailing slash
@@ -24,3 +26,4 @@ This coverage map applies to the unified `Langfuse` node when you choose `Resour
 - `errors` are included in the node output
 - missing `timestamp` generates an ISO timestamp in the node
 - missing `traceId` or `observationId` generates a stable hex id where applicable
+- retryable responses (`429`, `500`, `502`, `503`, `504`) are retried automatically with exponential backoff
