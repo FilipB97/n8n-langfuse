@@ -6,6 +6,7 @@ export type LangfusePublicApiOperation =
   | 'health'
   | 'listPrompts'
   | 'getPrompt'
+  | 'createPrompt'
   | 'listTraces'
   | 'getTrace'
   | 'listScores'
@@ -53,6 +54,13 @@ export interface LangfusePublicApiParameters {
   promptName?: string;
   promptLabel?: string;
   promptVersion?: string;
+  promptType?: string;
+  promptText?: string;
+  promptChatJson?: unknown;
+  promptLabels?: unknown;
+  promptTags?: unknown;
+  promptConfigJson?: unknown;
+  promptCommitMessage?: string;
   traceId?: string;
   scoreId?: string;
   observationId?: string;
@@ -114,6 +122,31 @@ function asRequestBody(value: unknown): unknown {
   return parseJsonMaybe(value);
 }
 
+function asStringArray(value: unknown): string[] | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(String);
+  }
+
+  const parsed = parseJsonMaybe(value);
+  if (Array.isArray(parsed)) {
+    return parsed.map(String);
+  }
+
+  if (typeof parsed === 'string') {
+    const items = parsed
+      .split(',')
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
+    return items.length > 0 ? items : undefined;
+  }
+
+  return undefined;
+}
+
 function methodAllowsBody(method: LangfusePublicApiMethod): boolean {
   return method !== 'GET' && method !== 'HEAD';
 }
@@ -159,6 +192,44 @@ export function resolveLangfusePublicApiEndpoint(
               },
             }
           : {}),
+      };
+    }
+    case 'createPrompt': {
+      const name = asString(params.promptName);
+      if (name === undefined) {
+        throw new Error('promptName is required for createPrompt');
+      }
+
+      const type = asString(params.promptType) ?? 'text';
+      const body: Record<string, unknown> = { name, type };
+
+      if (type === 'chat') {
+        const chat = asRequestBody(params.promptChatJson);
+        if (chat === undefined) {
+          throw new Error('promptChatJson is required for chat prompts');
+        }
+        body.prompt = chat;
+      } else {
+        const text = asString(params.promptText);
+        if (text === undefined) {
+          throw new Error('promptText is required for text prompts');
+        }
+        body.prompt = text;
+      }
+
+      const labels = asStringArray(params.promptLabels);
+      if (labels !== undefined) body.labels = labels;
+      const tags = asStringArray(params.promptTags);
+      if (tags !== undefined) body.tags = tags;
+      const config = asRequestBody(params.promptConfigJson);
+      if (config !== undefined) body.config = config;
+      const commitMessage = asString(params.promptCommitMessage);
+      if (commitMessage !== undefined) body.commitMessage = commitMessage;
+
+      return {
+        path: '/v2/prompts',
+        method: 'POST',
+        body,
       };
     }
     case 'listTraces':

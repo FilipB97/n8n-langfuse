@@ -9,6 +9,7 @@ This coverage map applies to the `Langfuse` node Public API operations. In **v1*
 | `Health` | `GET /api/public/health` | Quick availability and auth check |
 | `List Prompts` | `GET /api/public/v2/prompts` | Uses `queryJson` as query params |
 | `Get Prompt` | `GET /api/public/v2/prompts/{promptName}` | Supports `promptLabel` and `promptVersion` as query params |
+| `Create Prompt` | `POST /api/public/v2/prompts` | Creates a prompt or a new version. Body: `name` + `type` (`text`/`chat`) + `prompt`, plus optional `labels`, `tags`, `config`, `commitMessage` |
 | `List Traces` | `GET /api/public/traces` | Uses `queryJson` for filtering |
 | `Get Trace` | `GET /api/public/traces/{traceId}` | Fetches a single trace |
 | `List Scores` | `GET /api/public/v2/scores` | Uses `queryJson` for filtering |

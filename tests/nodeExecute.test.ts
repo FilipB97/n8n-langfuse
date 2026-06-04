@@ -137,6 +137,22 @@ test('routes createDatasetRunItem to /dataset-run-items with required body field
   }
 });
 
+test('routes createPrompt to a POST /v2/prompts with a typed body', async () => {
+  const stub = withFetch(() => ({ status: 201, body: { name: 'greeting', version: 1 } }));
+  try {
+    const ctx = makeContext({
+      paramsByIndex: [{ resource: 'prompt', operation: 'createPrompt', promptName: 'greeting', promptType: 'text', promptText: 'Hello {{name}}' }],
+    });
+    const [out] = await execute(ctx);
+    assert.equal(out[0]?.json.ok, true);
+    assert.equal(stub.calls[0]?.method, 'POST');
+    assert.match(stub.calls[0]?.url ?? '', /\/api\/public\/v2\/prompts$/);
+    assert.deepEqual(stub.calls[0]?.body, { name: 'greeting', type: 'text', prompt: 'Hello {{name}}' });
+  } finally {
+    stub.restore();
+  }
+});
+
 test('tags pairedItem per input item across multiple items', async () => {
   const stub = withFetch(() => ({ status: 200, body: { status: 'OK' } }));
   try {

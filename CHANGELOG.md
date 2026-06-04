@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Create Prompt** operation (node v2, `POST /api/public/v2/prompts`). Creates a
+  prompt or a new version of an existing one. Supports both `text` and `chat`
+  prompt types, plus optional `labels`, `tags`, `config`, and `commitMessage`.
+  This completes the Prompt resource to full read + write.
+
 ## [1.4.1] - 2026-06-04
 
 ### Added

@@ -25,7 +25,7 @@ Langfuse treats the Ingestion API as a legacy path and recommends OpenTelemetry 
 ### Reads (Public API)
 
 - `Health`
-- `List Prompts` / `Get Prompt`
+- `List Prompts` / `Get Prompt` / `Create Prompt` (text or chat, with labels, tags, config, and commit message)
 - `List Traces` / `Get Trace`
 - `List Scores` / `Get Score` / `Delete Score`
 - `List Observations` / `Get Observation`

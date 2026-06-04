@@ -335,3 +335,48 @@ test('resolveLangfusePublicApiEndpoint throws when createDatasetRunItem is missi
   assert.throws(() => resolveLangfusePublicApiEndpoint('createDatasetRunItem', { datasetItemId: 'item-1' }), /runName is required/i);
   assert.throws(() => resolveLangfusePublicApiEndpoint('createDatasetRunItem', { runName: 'run-1' }), /datasetItemId is required/i);
 });
+
+// --- Prompts (create) ---
+
+test('resolveLangfusePublicApiEndpoint builds a text createPrompt body (default type)', () => {
+  assert.deepEqual(
+    resolveLangfusePublicApiEndpoint('createPrompt', { promptName: 'greeting', promptText: 'Hello {{name}}' }),
+    { path: '/v2/prompts', method: 'POST', body: { name: 'greeting', type: 'text', prompt: 'Hello {{name}}' } },
+  );
+});
+
+test('resolveLangfusePublicApiEndpoint builds a chat createPrompt body and parses labels/tags/config', () => {
+  assert.deepEqual(
+    resolveLangfusePublicApiEndpoint('createPrompt', {
+      promptName: 'support',
+      promptType: 'chat',
+      promptChatJson: '[{"role":"system","content":"You are helpful"}]',
+      promptLabels: 'production, staging',
+      promptTags: '["faq","support"]',
+      promptConfigJson: '{"model":"gpt-4o-mini","temperature":0}',
+      promptCommitMessage: 'initial version',
+    }),
+    {
+      path: '/v2/prompts',
+      method: 'POST',
+      body: {
+        name: 'support',
+        type: 'chat',
+        prompt: [{ role: 'system', content: 'You are helpful' }],
+        labels: ['production', 'staging'],
+        tags: ['faq', 'support'],
+        config: { model: 'gpt-4o-mini', temperature: 0 },
+        commitMessage: 'initial version',
+      },
+    },
+  );
+});
+
+test('resolveLangfusePublicApiEndpoint validates createPrompt required fields', () => {
+  assert.throws(() => resolveLangfusePublicApiEndpoint('createPrompt', {}), /promptName is required/i);
+  assert.throws(() => resolveLangfusePublicApiEndpoint('createPrompt', { promptName: 'p' }), /promptText is required/i);
+  assert.throws(
+    () => resolveLangfusePublicApiEndpoint('createPrompt', { promptName: 'p', promptType: 'chat' }),
+    /promptChatJson is required/i,
+  );
+});

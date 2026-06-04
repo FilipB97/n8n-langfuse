@@ -13,6 +13,7 @@ export interface NodePropertyDisplayOptions {
     resource?: string[];
     operation?: string[];
     showAdvancedFields?: boolean[];
+    promptType?: string[];
   };
 }
 

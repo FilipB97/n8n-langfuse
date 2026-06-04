@@ -161,6 +161,21 @@ function buildPublicApiParameters(
       if (promptVersion !== undefined) params.promptVersion = promptVersion;
       break;
     }
+    case 'createPrompt': {
+      const promptName = asString(getOptionalNodeParameter(context, 'promptName', itemIndex));
+      const promptType = asString(getOptionalNodeParameter(context, 'promptType', itemIndex));
+      const promptText = asString(getOptionalNodeParameter(context, 'promptText', itemIndex));
+      const promptCommitMessage = asString(getOptionalNodeParameter(context, 'promptCommitMessage', itemIndex));
+      if (promptName !== undefined) params.promptName = promptName;
+      if (promptType !== undefined) params.promptType = promptType;
+      if (promptText !== undefined) params.promptText = promptText;
+      if (promptCommitMessage !== undefined) params.promptCommitMessage = promptCommitMessage;
+      params.promptChatJson = getOptionalNodeParameter(context, 'promptChatJson', itemIndex);
+      params.promptLabels = getOptionalNodeParameter(context, 'promptLabels', itemIndex);
+      params.promptTags = getOptionalNodeParameter(context, 'promptTags', itemIndex);
+      params.promptConfigJson = getOptionalNodeParameter(context, 'promptConfigJson', itemIndex);
+      break;
+    }
     case 'getTrace': {
       const traceId = asString(getOptionalNodeParameter(context, 'traceId', itemIndex));
       if (traceId !== undefined) params.traceId = traceId;
@@ -628,6 +643,7 @@ const v2Description: NodeDescription = {
       displayName: 'Operation', name: 'operation', type: 'options', default: 'getPrompt', noDataExpression: true,
       displayOptions: { show: { resource: ['prompt'] } },
       options: [
+        { name: 'Create', value: 'createPrompt', action: 'Create prompt', description: 'Create a prompt or a new version of it' },
         { name: 'Get', value: 'getPrompt', action: 'Get prompt', description: 'Read a specific prompt by name' },
         { name: 'List', value: 'listPrompts', action: 'List prompts', description: 'Read all prompts' },
       ],
@@ -743,6 +759,20 @@ const v2Description: NodeDescription = {
     { displayName: 'Prompt Label', name: 'promptLabel', type: 'string', default: '', placeholder: 'production', description: 'Optional prompt label query parameter', displayOptions: v2Adv('getPrompt') },
     { displayName: 'Prompt Version', name: 'promptVersion', type: 'string', default: '', description: 'Optional prompt version linked to the generation', displayOptions: v2Basic('generationCreate', 'generationUpdate', 'finalizeSpan') },
     { displayName: 'Prompt Version', name: 'promptVersion', type: 'string', default: '', description: 'Optional prompt version query parameter', displayOptions: v2Adv('getPrompt') },
+
+    // ---- Create Prompt fields ----
+    { displayName: 'Prompt Name', name: 'promptName', type: 'string', default: '', required: true, description: 'Name of the prompt to create or version', displayOptions: v2Basic('createPrompt') },
+    {
+      displayName: 'Prompt Type', name: 'promptType', type: 'options', default: 'text',
+      options: [{ name: 'Chat', value: 'chat' }, { name: 'Text', value: 'text' }],
+      description: 'Type of prompt to create', displayOptions: v2Basic('createPrompt'),
+    },
+    { displayName: 'Prompt Text', name: 'promptText', type: 'string', typeOptions: { rows: 4 }, default: '', placeholder: 'You are a helpful assistant. Answer: {{question}}', description: 'Text prompt content. Use {{variable}} placeholders for Langfuse variables.', displayOptions: { show: { operation: ['createPrompt'], promptType: ['text'] } } },
+    { displayName: 'Prompt Messages', name: 'promptChatJson', type: 'string', typeOptions: { rows: 4 }, default: '', placeholder: '[{"role":"system","content":"You are helpful"}]', description: 'JSON array of chat messages, each with a role and content', displayOptions: { show: { operation: ['createPrompt'], promptType: ['chat'] } } },
+    { displayName: 'Labels', name: 'promptLabels', type: 'string', default: '', placeholder: 'production', description: 'Comma-separated labels or a JSON array, for example "production"', displayOptions: v2Adv('createPrompt') },
+    { displayName: 'Tags', name: 'promptTags', type: 'string', default: '', placeholder: 'support,faq', description: 'Comma-separated tags or a JSON array', displayOptions: v2Adv('createPrompt') },
+    { displayName: 'Config JSON', name: 'promptConfigJson', type: 'string', default: '', placeholder: '{"model":"gpt-4o-mini","temperature":0}', description: 'Optional JSON config stored with the prompt, such as model and parameters', displayOptions: v2Adv('createPrompt') },
+    { displayName: 'Commit Message', name: 'promptCommitMessage', type: 'string', default: '', description: 'Optional commit message describing this prompt version', displayOptions: v2Adv('createPrompt') },
     { displayName: 'Prompt Labels JSON', name: 'promptLabelsJson', type: 'string', default: '', placeholder: '["production"]', description: 'JSON array of prompt labels stored with the generation', displayOptions: v2Adv('generationCreate', 'generationUpdate', 'finalizeSpan') },
     { displayName: 'Usage Details JSON', name: 'usageDetailsJson', type: 'string', default: '', placeholder: '{"prompt_tokens":1,"completion_tokens":2}', description: 'JSON usage breakdown stored with the generation', displayOptions: v2Adv('generationCreate', 'generationUpdate') },
     { displayName: 'Cost Details JSON', name: 'costDetailsJson', type: 'string', default: '', placeholder: '{"total_cost":0.01}', description: 'JSON cost breakdown stored with the generation', displayOptions: v2Adv('generationCreate', 'generationUpdate') },
