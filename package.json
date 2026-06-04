@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-langfuse-studio",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "description": "n8n community node for Langfuse ingestion and Public API access.",
   "license": "MIT",
   "author": {

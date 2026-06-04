@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-06-04
+
+### Added
+
+- **`Get Session`** Public API operation (`GET /api/public/sessions/{sessionId}`).
+- **`List Score Configs`** and **`Get Score Config`** Public API operations
+  (`GET /api/public/score-configs` and `GET /api/public/score-configs/{configId}`).
+  Score configs define the scoring schema (name, data type, categories) and their
+  IDs can now be referenced from `Score Create`.
+- **`List Annotation Queue Items`** Public API operation
+  (`GET /api/public/annotation-queue/{id}/items`), completing the Annotation Queue
+  resource alongside the existing List / Get queue operations.
+
 ## [1.5.1] - 2026-06-04
 
 ### Changed
@@ -150,7 +163,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Langfuse API` credentials (Base URL, Public Key, Secret Key, Timeout) using
   Basic Auth.
 
-[Unreleased]: https://github.com/FilipB97/n8n-langfuse/commits/codex/initial-publish
+[Unreleased]: https://github.com/FilipB97/n8n-langfuse/commits/main
+[1.6.0]: https://www.npmjs.com/package/n8n-nodes-langfuse-studio/v/1.6.0
 [1.5.1]: https://www.npmjs.com/package/n8n-nodes-langfuse-studio/v/1.5.1
 [1.5.0]: https://www.npmjs.com/package/n8n-nodes-langfuse-studio/v/1.5.0
 [1.4.1]: https://www.npmjs.com/package/n8n-nodes-langfuse-studio/v/1.4.1
