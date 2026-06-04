@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-06-04
+
 ### Added
 
 - **Langfuse Trigger node.** A new polling trigger that starts a workflow when
@@ -127,7 +129,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Langfuse API` credentials (Base URL, Public Key, Secret Key, Timeout) using
   Basic Auth.
 
-[Unreleased]: https://github.com/FilipB97/n8n-langfuse/compare/v1.4.1...HEAD
+[Unreleased]: https://github.com/FilipB97/n8n-langfuse/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/FilipB97/n8n-langfuse/releases/tag/v1.5.0
 [1.4.1]: https://github.com/FilipB97/n8n-langfuse/releases/tag/v1.4.1
 [1.4.0]: https://github.com/FilipB97/n8n-langfuse/releases/tag/v1.4.0
 [1.3.0]: https://github.com/FilipB97/n8n-langfuse/releases/tag/v1.3.0
