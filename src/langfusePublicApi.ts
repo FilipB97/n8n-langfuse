@@ -10,6 +10,7 @@ export type LangfusePublicApiOperation =
   | 'getTrace'
   | 'listScores'
   | 'getScore'
+  | 'deleteScore'
   | 'listObservations'
   | 'getObservation'
   | 'listSessions'
@@ -176,6 +177,17 @@ export function resolveLangfusePublicApiEndpoint(
       return {
         path: `/v2/scores/${encodeURIComponent(scoreId)}`,
         method: 'GET',
+      };
+    }
+    case 'deleteScore': {
+      const scoreId = asString(params.scoreId);
+      if (scoreId === undefined) {
+        throw new Error('scoreId is required for deleteScore');
+      }
+
+      return {
+        path: `/v2/scores/${encodeURIComponent(scoreId)}`,
+        method: 'DELETE',
       };
     }
     case 'listObservations':

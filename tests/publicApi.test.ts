@@ -150,6 +150,20 @@ test('resolveLangfusePublicApiEndpoint resolves listSessions with optional query
   );
 });
 
+test('resolveLangfusePublicApiEndpoint resolves deleteScore with score ID', () => {
+  assert.deepEqual(
+    resolveLangfusePublicApiEndpoint('deleteScore', { scoreId: 'score-abc-123' }),
+    { path: '/v2/scores/score-abc-123', method: 'DELETE' },
+  );
+});
+
+test('resolveLangfusePublicApiEndpoint throws when deleteScore has no scoreId', () => {
+  assert.throws(
+    () => resolveLangfusePublicApiEndpoint('deleteScore', {}),
+    /scoreId is required/i,
+  );
+});
+
 test('resolveLangfusePublicApiEndpoint omits empty customRequest body for GET requests', () => {
   assert.deepEqual(
     resolveLangfusePublicApiEndpoint('customRequest', {

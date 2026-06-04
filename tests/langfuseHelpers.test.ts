@@ -14,9 +14,11 @@ import {
   createTraceId,
   createObservationId,
   fetchLangfusePrompt,
+  LangfuseRequestError,
   normalizeBaseUrl,
   parseJsonMaybe,
   sendLangfuseIngestion,
+  withRetry,
 } from '../src/langfuse.js';
 
 test('normalizeBaseUrl removes trailing slashes without touching protocol', () => {
@@ -177,6 +179,44 @@ test('sendLangfuseIngestion accepts 207 multi-status with successes and errors',
   assert.equal(result.status, 207);
   assert.equal(result.successes.length, 1);
   assert.equal(result.errors.length, 1);
+});
+
+test('withRetry retries on retryable status codes and succeeds on the next attempt', async () => {
+  let attempts = 0;
+  const result = await withRetry(async () => {
+    attempts++;
+    if (attempts < 3) {
+      throw new LangfuseRequestError('rate limited', 429, { error: 'too many requests' });
+    }
+    return 'success';
+  });
+
+  assert.equal(result, 'success');
+  assert.equal(attempts, 3);
+});
+
+test('withRetry throws immediately on non-retryable errors', async () => {
+  let attempts = 0;
+  await assert.rejects(
+    () => withRetry(async () => {
+      attempts++;
+      throw new LangfuseRequestError('not found', 404, { error: 'not found' });
+    }),
+    /not found/,
+  );
+  assert.equal(attempts, 1);
+});
+
+test('withRetry throws after exhausting retries', async () => {
+  let attempts = 0;
+  await assert.rejects(
+    () => withRetry(async () => {
+      attempts++;
+      throw new LangfuseRequestError('server error', 503, {});
+    }, 2),
+    /server error/,
+  );
+  assert.equal(attempts, 3);
 });
 
 test('fetchLangfusePrompt uses basic auth and returns the prompt payload', async () => {

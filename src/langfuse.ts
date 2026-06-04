@@ -477,6 +477,22 @@ export function createSdkLogEvent(input: SdkLogEventInput): IngestionEvent {
   };
 }
 
+const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
+
+export async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (attempt < maxRetries && error instanceof LangfuseRequestError && RETRYABLE_STATUSES.has(error.status)) {
+        await new Promise<void>((resolve) => { setTimeout(resolve, 2 ** attempt * 500); });
+        continue;
+      }
+      throw error;
+    }
+  }
+}
+
 export async function sendLangfuseIngestion(options: LangfuseTransportOptions): Promise<LangfuseBatchResponse> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const url = buildIngestionUrl(options.baseUrl);
