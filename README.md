@@ -1,40 +1,39 @@
 # n8n Langfuse
 
-A custom n8n community node for Langfuse, built as a single node with grouped actions:
+A custom n8n community node for Langfuse. The node is **versioned**:
 
-- `Resource = Ingestion` for trace, span, generation, event, score, SDK log, and raw batch writes
-- `Resource = Public API` for health, prompts, traces, scores, observations, annotation queues, and custom requests
+- **v2 (default)** groups actions by entity — `Trace`, `Span`, `Generation`, `Score`, `Prompt`, `Session`, `Observation`, `Annotation Queue`, and `System` — so the operation list under each resource stays short and focused.
+- **v1** keeps the original two-resource layout (`Ingestion` / `Public API`). Existing workflows built on v1 keep working unchanged.
 
 Langfuse treats the Ingestion API as a legacy path and recommends OpenTelemetry for future telemetry integrations. This node is still useful when you want direct control over ingestion payloads or when you need to read Langfuse data from inside a workflow.
 
 ## What It Does
 
-### Ingestion
+### Writes (ingestion events)
 
 - `Trace Create`
-- `Span Create`
-- `Span Update`
-- `Generation Create`
-- `Generation Update`
-- `Finalize Span`
+- `Span Create` / `Span Update`
+- `Generation Create` / `Generation Update`
+- `Finalize Span` (generation-create + span-update in one batch)
 - `Event Create`
 - `Score Create`
 - `SDK Log Create`
 - `Batch Raw`
 
-### Public API
+`Trace Create`, `Span Create`, `Generation Create`, and `Event Create` accept an optional `Environment` label.
+
+### Reads (Public API)
 
 - `Health`
-- `List Prompts`
-- `Get Prompt`
-- `List Traces`
-- `Get Trace`
-- `List Scores`
-- `Get Score`
-- `List Observations`
-- `List Annotation Queues`
-- `Get Annotation Queue`
+- `List Prompts` / `Get Prompt`
+- `List Traces` / `Get Trace`
+- `List Scores` / `Get Score` / `Delete Score`
+- `List Observations` / `Get Observation`
+- `List Sessions`
+- `List Annotation Queues` / `Get Annotation Queue`
 - `Custom Request`
+
+All requests retry automatically with exponential backoff on retryable responses (`429`, `500`, `502`, `503`, `504`).
 
 ## Installation
 
@@ -83,6 +82,7 @@ Langfuse uses Basic Auth:
 
 See:
 
+- [Full demo workflow](docs/example-workflow.md) — importable n8n workflow that runs every operation end-to-end with a real OpenAI call ([`example-workflow.json`](docs/example-workflow.json))
 - [Examples](docs/examples.md)
 - [Quick test](docs/quick-test.md)
 - [Ingestion coverage](docs/api-coverage.md)
@@ -95,7 +95,7 @@ See:
 - `Trace Create` auto-generates a trace id when `Trace ID` is left blank
 - `Span Create`, `Generation Create`, `Event Create`, and `SDK Log Create` auto-generate observation ids when needed
 - `Span Update`, `Generation Update`, and `Finalize Span` require an `Observation ID`
-- `Score Create` requires a trace id and score value
+- `Score Create` requires a score value plus either a trace id or a session id
 - `timestamp` is generated automatically when missing
 - `207 Multi-Status` responses are treated as valid ingestion responses
 - partial ingestion errors are returned in the output and can optionally fail the item
