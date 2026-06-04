@@ -46,6 +46,7 @@ export interface NodeDescription {
   defaults: {
     name: string;
   };
+  polling?: boolean;
   inputs: string[];
   outputs: string[];
   credentials: Array<{
@@ -65,6 +66,18 @@ export interface LangfuseExecuteContext {
   getNodeParameter(name: string, index: number): unknown;
   getCredentials(name: string): Promise<LangfuseCredentials>;
   continueOnFail?: () => boolean;
+}
+
+export interface LangfusePollContext {
+  getNodeParameter(name: string, index?: number): unknown;
+  getCredentials(name: string): Promise<LangfuseCredentials>;
+  getWorkflowStaticData(type: string): Record<string, unknown>;
+  getMode?(): string;
+}
+
+export interface TriggerNodeType {
+  description: NodeDescription;
+  poll(this: LangfusePollContext): Promise<Array<Array<NodeInputItem>> | null>;
 }
 
 export interface VersionedNodeVersion {

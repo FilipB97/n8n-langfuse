@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Langfuse Trigger node.** A new polling trigger that starts a workflow when
+  new `New Trace`, `New Score`, or `New Observation` records appear in Langfuse.
+  The first poll establishes a baseline; later polls emit only new records since
+  the last poll, de-duplicated by id. Traces and scores filter by `fromTimestamp`,
+  observations by `fromStartTime`. Manual mode returns one recent record without
+  advancing the cursor.
 - **Create Prompt** operation (node v2, `POST /api/public/v2/prompts`). Creates a
   prompt or a new version of an existing one. Supports both `text` and `chat`
   prompt types, plus optional `labels`, `tags`, `config`, and `commitMessage`.

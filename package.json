@@ -27,6 +27,7 @@
     "dist/index.d.ts.map",
     "dist/src",
     "dist/nodes/Langfuse",
+    "dist/nodes/LangfuseTrigger",
     "dist/credentials",
     "README.md",
     "CHANGELOG.md",
@@ -47,7 +48,8 @@
       "dist/credentials/LangfuseApi.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/Langfuse/Langfuse.node.js"
+      "dist/nodes/Langfuse/Langfuse.node.js",
+      "dist/nodes/LangfuseTrigger/LangfuseTrigger.node.js"
     ]
   },
   "devDependencies": {
