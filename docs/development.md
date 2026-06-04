@@ -19,15 +19,23 @@
 ```bash
 npm run compile
 npm test
+npm run lint      # tsc --noEmit + eslint (konwencje n8n)
+npm run lint:fix  # auto-naprawa reguł eslint
 npm run package
 ```
+
+## Lint
+
+`npm run lint` uruchamia type-check (`tsc --noEmit`) oraz `eslint-plugin-n8n-nodes-base`,
+który pilnuje konwencji node'ów n8n (styl opisów, pisownia `ID`, kolejność opcji,
+opisy pól boolean zaczynające się od "Whether"). Ten sam lint działa w CI na każdym PR.
 
 ## Typowy cykl pracy
 
 1. Dodaj lub zmien test dla helpera albo logiki operacji.
 2. Uruchom `npm test`.
 3. Dopisz implementacje.
-4. Uruchom `npm run compile`.
+4. Uruchom `npm run lint` i `npm run compile`.
 5. Sprawdz `git diff`.
 
 ## Lokalny build
@@ -52,6 +60,8 @@ Testy obejmuja:
 - parse JSON helpery
 - zachowanie 207 multi-status
 - mapowanie opcji node do payloadow
+- rozwiazywanie endpointow Public API (w tym Dataset API)
+- warstwe wykonania node (`runExecute`): routing operacji, budowa body POST, `pairedItem`, `continueOnFail`
 
 ## Pakowanie
 

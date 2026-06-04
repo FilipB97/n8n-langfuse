@@ -1,0 +1,25 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="ring" x1="10" y1="9" x2="38" y2="39" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2AF598"/>
+      <stop offset="1" stop-color="#00C2FF"/>
+    </linearGradient>
+    <linearGradient id="core" x1="15" y1="15" x2="33" y2="33" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0E1730"/>
+      <stop offset="1" stop-color="#101B3A"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="19" y1="17" x2="29" y2="31" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D7FFF1"/>
+      <stop offset="1" stop-color="#7CF6C4"/>
+    </linearGradient>
+  </defs>
+  <circle cx="24" cy="24" r="17" stroke="url(#ring)" stroke-width="3.5"/>
+  <circle cx="24" cy="24" r="10.5" fill="url(#core)" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+  <circle cx="24" cy="24" r="4.5" fill="url(#accent)"/>
+  <path d="M14.5 29.5C17.4 23.9 20.8 21.5 24 21.5C27.2 21.5 30.6 23.9 33.5 29.5" stroke="url(#ring)" stroke-width="2" stroke-linecap="round"/>
+  <path d="M15.2 18.8C18.1 16.1 20.9 14.8 24 14.8C27.1 14.8 29.9 16.1 32.8 18.8" stroke="url(#ring)" stroke-width="1.7" stroke-linecap="round" stroke-dasharray="2 2.8"/>
+  <circle cx="13.8" cy="28.8" r="2" fill="#2AF598"/>
+  <circle cx="34.2" cy="28.8" r="2" fill="#00C2FF"/>
+  <circle cx="24" cy="12.7" r="2" fill="#7CF6C4"/>
+  <path d="M33.7 11.2L34.7 13.2L36.7 14.2L34.7 15.2L33.7 17.2L32.7 15.2L30.7 14.2L32.7 13.2L33.7 11.2Z" fill="#D7FFF1"/>
+</svg>

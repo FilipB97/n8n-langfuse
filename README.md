@@ -25,7 +25,7 @@ Langfuse treats the Ingestion API as a legacy path and recommends OpenTelemetry 
 ### Reads (Public API)
 
 - `Health`
-- `List Prompts` / `Get Prompt`
+- `List Prompts` / `Get Prompt` / `Create Prompt` (text or chat, with labels, tags, config, and commit message)
 - `List Traces` / `Get Trace`
 - `List Scores` / `Get Score` / `Delete Score`
 - `List Observations` / `Get Observation`
@@ -44,6 +44,16 @@ For building and running LLM evaluation sets:
 A typical eval loop: create a dataset → add items → run your workflow per item → link each result with `Create Run Item` → read results via `Get Dataset Run`.
 
 All requests retry automatically with exponential backoff on retryable responses (`429`, `500`, `502`, `503`, `504`).
+
+## Trigger node
+
+The package also ships a **Langfuse Trigger** node that starts a workflow when new records appear in Langfuse. It polls the Public API and emits new items per poll. Pick an event:
+
+- `New Trace`
+- `New Score`
+- `New Observation`
+
+The first poll establishes a baseline (it does not replay history); later polls emit only records created since the previous poll, de-duplicated by id. Use the editor's *Fetch Test Event* to pull one recent record without affecting the cursor.
 
 ## Installation
 

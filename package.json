@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-langfuse-studio",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "n8n community node for Langfuse ingestion and Public API access.",
   "license": "MIT",
   "author": {
@@ -27,6 +27,7 @@
     "dist/index.d.ts.map",
     "dist/src",
     "dist/nodes/Langfuse",
+    "dist/nodes/LangfuseTrigger",
     "dist/credentials",
     "README.md",
     "CHANGELOG.md",
@@ -36,7 +37,8 @@
     "compile": "node ./scripts/clean-dist.mjs && tsc -p . && node ./scripts/copy-assets.mjs",
     "build": "npm run compile",
     "test": "tsx --test tests/**/*.test.ts",
-    "lint": "tsc -p . --noEmit",
+    "lint": "tsc -p . --noEmit && eslint \"nodes/**/*.ts\" \"credentials/**/*.ts\"",
+    "lint:fix": "eslint \"nodes/**/*.ts\" \"credentials/**/*.ts\" --fix",
     "dev": "npm run compile",
     "package": "npm run compile"
   },
@@ -46,11 +48,15 @@
       "dist/credentials/LangfuseApi.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/Langfuse/Langfuse.node.js"
+      "dist/nodes/Langfuse/Langfuse.node.js",
+      "dist/nodes/LangfuseTrigger/LangfuseTrigger.node.js"
     ]
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^8.57.0",
+    "eslint-plugin-n8n-nodes-base": "^1.16.3",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3"
   }
