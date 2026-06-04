@@ -65,6 +65,18 @@ export interface LangfuseExecuteContext {
   continueOnFail?: () => boolean;
 }
 
+export interface VersionedNodeVersion {
+  description: NodeDescription;
+  execute(this: LangfuseExecuteContext): Promise<Array<Array<NodeInputItem>>>;
+}
+
+export interface VersionedNodeType {
+  description: Omit<NodeDescription, 'version' | 'properties'> & { version: number[] };
+  currentVersion: number;
+  nodeVersions: Record<number, VersionedNodeVersion>;
+  getNodeType(version?: number): VersionedNodeVersion;
+}
+
 export interface CredentialProperty {
   displayName: string;
   name: string;
