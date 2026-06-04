@@ -12,7 +12,9 @@ const lfCred = { langfuseApi: { id: 'REPLACE_LANGFUSE_CRED', name: 'Langfuse acc
 const COL = 240; // horizontal spacing between nodes
 const HEAD_Y = 0;
 const LANE_X0 = 3 * COL; // first lane node sits to the right of the head row
-const LANES_Y = { ingestion: 200, reads: 420, datasets: 640, prompts: 860 };
+const LANES_Y = { ingestion: 200, reads: 420, datasets: 640, prompts: 860, verify: 1080 };
+// Ingestion lane has 11 nodes (indices 0-10); verify starts right after the last one.
+const VERIFY_X0 = LANE_X0 + 11 * COL;
 
 const setupRef = (key) => `={{ $('Setup IDs').item.json.${key} }}`;
 const openAiJson = "={{ JSON.stringify($('OpenAI Chat').item.json) }}";
@@ -48,7 +50,7 @@ const head = [
   }),
 ];
 
-// --- Lane 1: Ingestion (build a trace, then verify it round-trips) ---
+// --- Lane 1: Ingestion (build a trace, then hand off to the verify lane) ---
 const ingestion = [
   lf('Trace Create', { resource: 'trace', operation: 'traceCreate', traceId: setupRef('traceId'), name: 'n8n-demo-trace', inputJson: promptJson, outputJson: openAiJson, showAdvancedFields: true, sessionId: setupRef('sessionId'), tags: 'n8n,demo,langfuse-studio', environment: 'production', metadataJson: '{"source":"n8n","demo":"langfuse-studio"}' }),
   lf('Span Create', { resource: 'span', operation: 'spanCreate', traceId: setupRef('traceId'), name: 'workflow-step', inputJson: promptJson, showAdvancedFields: true, observationId: setupRef('spanId'), startTime: '={{ $now.toISO() }}', environment: 'production' }),
@@ -61,6 +63,11 @@ const ingestion = [
   lf('SDK Log', { resource: 'system', operation: 'sdkLogCreate', traceId: setupRef('traceId'), sdkMessage: 'n8n Langfuse Studio demo SDK log', sdkLevel: 'info', showAdvancedFields: true, metadataJson: '{"component":"n8n"}' }),
   lf('Batch Raw', { resource: 'system', operation: 'batchRaw', batchJson: "={{ JSON.stringify({ batch: [ { id: 'evt-' + $now.toMillis(), type: 'event-create', timestamp: $now.toISO(), body: { id: 'batch-' + $now.toMillis(), traceId: $('Setup IDs').item.json.traceId, name: 'raw-batch-event' } } ] }) }}" }),
   plain('Wait for Ingestion', 'n8n-nodes-base.wait', 1.1, { amount: 5 }),
+];
+
+// --- Lane 5: Round-trip verification (reads back what Lane 1 wrote, after the Wait) ---
+// Positioned to the right of the Wait node so the downward connection is short.
+const verify = [
   lf('Get Trace', { resource: 'trace', operation: 'getTrace', traceId: setupRef('traceId') }),
   lf('Get Observation', { resource: 'observation', operation: 'getObservation', observationId: setupRef('spanId') }),
   lf('Get Score', { resource: 'score', operation: 'getScore', scoreId: setupRef('scoreId') }),
@@ -97,10 +104,11 @@ const prompts = [
 ];
 
 const laneDefs = [
-  { key: 'ingestion', title: '1 · Ingestion (writes) → verify round-trip', color: 5, nodes: ingestion },
-  { key: 'reads', title: '2 · Public API reads (existing data)', color: 4, nodes: reads },
-  { key: 'datasets', title: '3 · Datasets (evaluation building blocks)', color: 3, nodes: datasets },
-  { key: 'prompts', title: '4 · Prompts (create → list → get)', color: 6, nodes: prompts },
+  { key: 'ingestion', title: '1 · Ingestion (writes + wait)', color: 5, nodes: ingestion, xStart: LANE_X0 },
+  { key: 'reads', title: '2 · Public API reads (existing data)', color: 4, nodes: reads, xStart: LANE_X0 },
+  { key: 'datasets', title: '3 · Datasets (evaluation building blocks)', color: 3, nodes: datasets, xStart: LANE_X0 },
+  { key: 'prompts', title: '4 · Prompts (create → list → get)', color: 6, nodes: prompts, xStart: LANE_X0 },
+  { key: 'verify', title: '5 · Round-trip verification (Get / Delete)', color: 5, nodes: verify, xStart: VERIFY_X0 },
 ];
 
 // --- Materialize nodes + positions ---
@@ -123,14 +131,15 @@ head.forEach((spec, i) => nodes.push(materialize(spec, [i * COL, HEAD_Y])));
 
 for (const lane of laneDefs) {
   const y = LANES_Y[lane.key];
-  lane.nodes.forEach((spec, i) => nodes.push(materialize(spec, [LANE_X0 + i * COL, y])));
+  const x0 = lane.xStart ?? LANE_X0;
+  lane.nodes.forEach((spec, i) => nodes.push(materialize(spec, [x0 + i * COL, y])));
 }
 
 // --- Lane background sticky notes + README ---
 const stickies = [
   {
     parameters: {
-      content: '## Langfuse Studio — grouped demo\n\nManual Trigger → **Setup IDs** → **OpenAI Chat**, then a fan-out into four independent lanes you can read at a glance:\n\n1. **Ingestion** — build a trace (span/generation/score/event/log/batch), wait, then read it back.\n2. **Public API reads** — health and list endpoints over existing data.\n3. **Datasets** — create a dataset, item, and run item, then read the run.\n4. **Prompts** — create a prompt, list, and fetch it.\n\n### Setup\n1. Install `n8n-nodes-langfuse-studio`.\n2. Set your **Langfuse API** credential on every Langfuse node.\n3. Set your **OpenAI** credential on OpenAI Chat.\n\nEvery Langfuse node uses *Continue On Error*, so one failure never stops a lane. Langfuse ingestion is async — a 5s Wait precedes the round-trip reads, but a Get may still 404 on very fast runs; that is expected.',
+      content: '## Langfuse Studio — grouped demo\n\nManual Trigger → **Setup IDs** → **OpenAI Chat**, then a fan-out into five lanes you can read at a glance:\n\n1. **Ingestion** — build a trace (span/generation/score/event/log/batch), then Wait.\n2. **Public API reads** — health and list endpoints over existing data.\n3. **Datasets** — create a dataset, item, and run item, then read the run.\n4. **Prompts** — create a prompt, list, and fetch it.\n5. **Round-trip verification** — reads back the trace/observation/score written in lane 1, then deletes the demo score.\n\n### Setup\n1. Install `n8n-nodes-langfuse-studio`.\n2. Set your **Langfuse API** credential on every Langfuse node.\n3. Set your **OpenAI** credential on OpenAI Chat.\n\nEvery Langfuse node uses *Continue On Error*, so one failure never stops a lane. Langfuse ingestion is async — a 5s Wait precedes the round-trip reads, but a Get may still 404 on very fast runs; that is expected.',
       height: 320,
       width: 460,
     },
@@ -144,6 +153,7 @@ const stickies = [
 
 for (const lane of laneDefs) {
   const y = LANES_Y[lane.key];
+  const x0 = lane.xStart ?? LANE_X0;
   const width = lane.nodes.length * COL + 60;
   stickies.push({
     parameters: { content: `### ${lane.title}`, height: 200, width, color: lane.color },
@@ -151,7 +161,7 @@ for (const lane of laneDefs) {
     name: `Lane: ${lane.key}`,
     type: 'n8n-nodes-base.stickyNote',
     typeVersion: 1,
-    position: [LANE_X0 - 80, y - 110],
+    position: [x0 - 80, y - 110],
   });
 }
 
@@ -165,11 +175,14 @@ const linkChain = (chainNodes) => {
 };
 
 linkChain(head);
-// Fan out from OpenAI Chat into the first node of every lane.
-connections['OpenAI Chat'] = { main: [laneDefs.map((lane) => connection(lane.nodes[0].name))] };
+// Fan out from OpenAI Chat into the first node of lanes 1–4 (not verify, which starts after the Wait).
+const fanOutLanes = laneDefs.filter((lane) => lane.key !== 'verify');
+connections['OpenAI Chat'] = { main: [fanOutLanes.map((lane) => connection(lane.nodes[0].name))] };
 for (const lane of laneDefs) {
   linkChain(lane.nodes);
 }
+// Wire the end of lane 1 (Wait for Ingestion) into the start of lane 5 (verify).
+connections['Wait for Ingestion'] = { main: [[connection(verify[0].name)]] };
 
 const workflow = {
   name: 'Langfuse Studio — grouped demo',
@@ -180,4 +193,4 @@ const workflow = {
 };
 
 writeFileSync(new URL('../docs/example-workflow.json', import.meta.url), JSON.stringify(workflow, null, 2) + '\n');
-console.log('wrote docs/example-workflow.json with', nodes.length, 'nodes across', laneDefs.length, 'lanes');
+console.log('wrote docs/example-workflow.json with', nodes.length, 'nodes across', laneDefs.length, 'lanes (5 visible lanes + head row)');

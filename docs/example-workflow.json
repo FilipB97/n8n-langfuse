@@ -3,11 +3,11 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Langfuse Studio — grouped demo\n\nManual Trigger → **Setup IDs** → **OpenAI Chat**, then a fan-out into four independent lanes you can read at a glance:\n\n1. **Ingestion** — build a trace (span/generation/score/event/log/batch), wait, then read it back.\n2. **Public API reads** — health and list endpoints over existing data.\n3. **Datasets** — create a dataset, item, and run item, then read the run.\n4. **Prompts** — create a prompt, list, and fetch it.\n\n### Setup\n1. Install `n8n-nodes-langfuse-studio`.\n2. Set your **Langfuse API** credential on every Langfuse node.\n3. Set your **OpenAI** credential on OpenAI Chat.\n\nEvery Langfuse node uses *Continue On Error*, so one failure never stops a lane. Langfuse ingestion is async — a 5s Wait precedes the round-trip reads, but a Get may still 404 on very fast runs; that is expected.",
+        "content": "## Langfuse Studio — grouped demo\n\nManual Trigger → **Setup IDs** → **OpenAI Chat**, then a fan-out into five lanes you can read at a glance:\n\n1. **Ingestion** — build a trace (span/generation/score/event/log/batch), then Wait.\n2. **Public API reads** — health and list endpoints over existing data.\n3. **Datasets** — create a dataset, item, and run item, then read the run.\n4. **Prompts** — create a prompt, list, and fetch it.\n5. **Round-trip verification** — reads back the trace/observation/score written in lane 1, then deletes the demo score.\n\n### Setup\n1. Install `n8n-nodes-langfuse-studio`.\n2. Set your **Langfuse API** credential on every Langfuse node.\n3. Set your **OpenAI** credential on OpenAI Chat.\n\nEvery Langfuse node uses *Continue On Error*, so one failure never stops a lane. Langfuse ingestion is async — a 5s Wait precedes the round-trip reads, but a Get may still 404 on very fast runs; that is expected.",
         "height": 320,
         "width": 460
       },
-      "id": "bd8a6f3f-694c-423e-8b92-b6674ab90ef9",
+      "id": "3c03556d-f302-425c-b10d-2c5294ffee84",
       "name": "README",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -18,12 +18,12 @@
     },
     {
       "parameters": {
-        "content": "### 1 · Ingestion (writes) → verify round-trip",
+        "content": "### 1 · Ingestion (writes + wait)",
         "height": 200,
-        "width": 3660,
+        "width": 2700,
         "color": 5
       },
-      "id": "1202e51d-6e5b-47a9-ad4f-c5bcb680c8e9",
+      "id": "015e0499-28a6-4d62-ba51-95a71dc23d6f",
       "name": "Lane: ingestion",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -39,7 +39,7 @@
         "width": 1980,
         "color": 4
       },
-      "id": "778da14b-18ab-402a-83f5-6ec12b6066be",
+      "id": "795f50c3-41b4-43fa-a9ab-b6cab913473a",
       "name": "Lane: reads",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -55,7 +55,7 @@
         "width": 1500,
         "color": 3
       },
-      "id": "a5cc00d5-391c-4815-9901-30d8f0572409",
+      "id": "4306a19f-4724-4e3b-9ee1-001c78e276a1",
       "name": "Lane: datasets",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -71,7 +71,7 @@
         "width": 780,
         "color": 6
       },
-      "id": "8cc1e923-2819-4b30-86e5-9a982fd09435",
+      "id": "03b6243a-dd56-4853-bdb5-7800f7ba24d0",
       "name": "Lane: prompts",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -81,8 +81,24 @@
       ]
     },
     {
+      "parameters": {
+        "content": "### 5 · Round-trip verification (Get / Delete)",
+        "height": 200,
+        "width": 1020,
+        "color": 5
+      },
+      "id": "0aa352de-647b-4cd2-afba-df385701744c",
+      "name": "Lane: verify",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3280,
+        970
+      ]
+    },
+    {
       "parameters": {},
-      "id": "13368632-4872-42d0-93f7-d80b79dce52b",
+      "id": "e158e2ce-ef1c-4217-b340-e56693f12a1a",
       "name": "Manual Trigger",
       "position": [
         0,
@@ -153,7 +169,7 @@
         },
         "options": {}
       },
-      "id": "086a64f4-4039-41af-a54e-d1b899fe2eb0",
+      "id": "24852670-4802-453e-b1da-b5223f78ef71",
       "name": "Setup IDs",
       "position": [
         240,
@@ -180,7 +196,7 @@
         },
         "options": {}
       },
-      "id": "e9f7c007-e404-44d1-a184-058ceb20b785",
+      "id": "317f3d77-cb4a-4b8d-ab05-b6a56893caea",
       "name": "OpenAI Chat",
       "position": [
         480,
@@ -210,7 +226,7 @@
         "environment": "production",
         "metadataJson": "{\"source\":\"n8n\",\"demo\":\"langfuse-studio\"}"
       },
-      "id": "d07a44d5-59aa-407d-9881-c428ef937f4c",
+      "id": "75967d5e-d6ed-46ae-9eb5-557f120f4328",
       "name": "Trace Create",
       "position": [
         720,
@@ -238,7 +254,7 @@
         "startTime": "={{ $now.toISO() }}",
         "environment": "production"
       },
-      "id": "27740626-c25e-409e-9d90-7c4cb4315886",
+      "id": "18693778-b6e0-4d1e-a43e-d65ec64d2a6a",
       "name": "Span Create",
       "position": [
         960,
@@ -267,7 +283,7 @@
         "statusMessage": "completed",
         "outputJson": "{\"status\":\"ok\"}"
       },
-      "id": "59c3accb-60c2-4035-be2c-f54bdcc98125",
+      "id": "986775c9-92d9-4451-9b16-2a558cfdb2e2",
       "name": "Span Update",
       "position": [
         1200,
@@ -300,7 +316,7 @@
         "usageDetailsJson": "={{ JSON.stringify($('OpenAI Chat').item.json.usage ?? $('OpenAI Chat').item.json.tokenUsage ?? {}) }}",
         "modelParametersJson": "{\"temperature\":0.7}"
       },
-      "id": "0e238cb4-1d37-4c59-94c3-db872fb18c56",
+      "id": "71b4eed4-06f9-414f-a8e8-e8c3dd996a6d",
       "name": "Generation Create",
       "position": [
         1440,
@@ -329,7 +345,7 @@
         "endTime": "={{ $now.toISO() }}",
         "costDetailsJson": "{\"total_cost\":0.0001}"
       },
-      "id": "9b359e56-caf5-4096-813f-34591ffcba7f",
+      "id": "c7abf4e2-9c18-4248-87f6-4effb155ebd5",
       "name": "Generation Update",
       "position": [
         1680,
@@ -360,7 +376,7 @@
         "observationId": "={{ $('Setup IDs').item.json.spanId }}",
         "endTime": "={{ $now.toISO() }}"
       },
-      "id": "8b95a4e1-3594-4104-a091-8592abfa7734",
+      "id": "c8c54f8d-bfdd-4ab5-ba0d-f3fc4bbe2ccc",
       "name": "Finalize Span",
       "position": [
         1920,
@@ -389,7 +405,7 @@
         "scoreComment": "Automated demo score",
         "scoreEnvironment": "production"
       },
-      "id": "441190ee-31f1-4ffc-b763-eddc6b560194",
+      "id": "b302dbc9-88c4-4fd0-ae47-afb348892520",
       "name": "Score Create",
       "position": [
         2160,
@@ -417,7 +433,7 @@
         "environment": "production",
         "metadataJson": "{\"step\":\"event-demo\"}"
       },
-      "id": "9d998a0b-5757-4bac-81c4-0b7913b8cb45",
+      "id": "a235b317-dfcd-4046-81ff-91e41e1ef9c1",
       "name": "Event Create",
       "position": [
         2400,
@@ -443,7 +459,7 @@
         "showAdvancedFields": true,
         "metadataJson": "{\"component\":\"n8n\"}"
       },
-      "id": "9d7acb4c-936b-47ba-9d50-1f4321afd8d2",
+      "id": "36ecf205-9a9d-493b-8882-49d795fe525c",
       "name": "SDK Log",
       "position": [
         2640,
@@ -465,7 +481,7 @@
         "operation": "batchRaw",
         "batchJson": "={{ JSON.stringify({ batch: [ { id: 'evt-' + $now.toMillis(), type: 'event-create', timestamp: $now.toISO(), body: { id: 'batch-' + $now.toMillis(), traceId: $('Setup IDs').item.json.traceId, name: 'raw-batch-event' } } ] }) }}"
       },
-      "id": "bb968de2-9c35-44dd-a369-a8351ad387b0",
+      "id": "fcfc2382-ac29-4e47-91cc-3684bca69709",
       "name": "Batch Raw",
       "position": [
         2880,
@@ -485,7 +501,7 @@
       "parameters": {
         "amount": 5
       },
-      "id": "c027793e-a337-4fdb-995f-f5f17fedd533",
+      "id": "67fecadd-fa91-480d-9754-d2faaf1b8ca8",
       "name": "Wait for Ingestion",
       "position": [
         3120,
@@ -496,98 +512,10 @@
     },
     {
       "parameters": {
-        "resource": "trace",
-        "operation": "getTrace",
-        "traceId": "={{ $('Setup IDs').item.json.traceId }}"
-      },
-      "id": "f0af7766-b824-4430-832a-e8ad227cb43e",
-      "name": "Get Trace",
-      "position": [
-        3360,
-        200
-      ],
-      "type": "n8n-nodes-langfuse-studio.langfuse",
-      "typeVersion": 2,
-      "credentials": {
-        "langfuseApi": {
-          "id": "REPLACE_LANGFUSE_CRED",
-          "name": "Langfuse account"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "resource": "observation",
-        "operation": "getObservation",
-        "observationId": "={{ $('Setup IDs').item.json.spanId }}"
-      },
-      "id": "dc05211f-9f1e-4567-bcf0-4a0983d04417",
-      "name": "Get Observation",
-      "position": [
-        3600,
-        200
-      ],
-      "type": "n8n-nodes-langfuse-studio.langfuse",
-      "typeVersion": 2,
-      "credentials": {
-        "langfuseApi": {
-          "id": "REPLACE_LANGFUSE_CRED",
-          "name": "Langfuse account"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "resource": "score",
-        "operation": "getScore",
-        "scoreId": "={{ $('Setup IDs').item.json.scoreId }}"
-      },
-      "id": "0e37255d-0faa-4b14-91fa-223717d0134b",
-      "name": "Get Score",
-      "position": [
-        3840,
-        200
-      ],
-      "type": "n8n-nodes-langfuse-studio.langfuse",
-      "typeVersion": 2,
-      "credentials": {
-        "langfuseApi": {
-          "id": "REPLACE_LANGFUSE_CRED",
-          "name": "Langfuse account"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "resource": "score",
-        "operation": "deleteScore",
-        "scoreId": "={{ $('Setup IDs').item.json.scoreId }}"
-      },
-      "id": "f63461bd-4ca1-497c-9f5d-6318d8e32803",
-      "name": "Delete Score",
-      "position": [
-        4080,
-        200
-      ],
-      "type": "n8n-nodes-langfuse-studio.langfuse",
-      "typeVersion": 2,
-      "credentials": {
-        "langfuseApi": {
-          "id": "REPLACE_LANGFUSE_CRED",
-          "name": "Langfuse account"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
         "resource": "system",
         "operation": "health"
       },
-      "id": "d8ed1f29-d342-4176-97d0-3ced94dd5bd7",
+      "id": "423c82ce-6492-40db-b150-6579bb13e9df",
       "name": "Health",
       "position": [
         720,
@@ -610,7 +538,7 @@
         "showAdvancedFields": true,
         "queryJson": "{\"limit\":5}"
       },
-      "id": "a1faaef4-b1f6-41c6-a12b-ac2d4ccba123",
+      "id": "ee2dd2f1-7db8-4cee-8c10-b3f2db5d0428",
       "name": "List Traces",
       "position": [
         960,
@@ -633,7 +561,7 @@
         "showAdvancedFields": true,
         "queryJson": "{\"limit\":5}"
       },
-      "id": "56d68212-86d9-46de-aec8-0bfcb75aa1d8",
+      "id": "87f21a23-8076-43b8-bbe9-6286df5302d1",
       "name": "List Observations",
       "position": [
         1200,
@@ -656,7 +584,7 @@
         "showAdvancedFields": true,
         "queryJson": "{\"limit\":5}"
       },
-      "id": "966cb7ea-8a05-4118-a173-d7c402244408",
+      "id": "9937c42c-9087-4248-a9dd-a16998b24c71",
       "name": "List Scores",
       "position": [
         1440,
@@ -679,7 +607,7 @@
         "showAdvancedFields": true,
         "queryJson": "{\"limit\":5}"
       },
-      "id": "87a88d90-aa83-45dc-9e33-29feb5f1989b",
+      "id": "a950bff2-de1d-4d49-983d-6ede18ecec45",
       "name": "List Sessions",
       "position": [
         1680,
@@ -702,7 +630,7 @@
         "showAdvancedFields": true,
         "queryJson": "{\"limit\":5}"
       },
-      "id": "13ffc2f6-780d-47b9-a256-cc8fc786bcd5",
+      "id": "78ad89d7-3af9-41a2-8b19-9261d82d9df0",
       "name": "List Annotation Queues",
       "position": [
         1920,
@@ -724,7 +652,7 @@
         "operation": "getAnnotationQueue",
         "queueId": "={{ $json.data?.[0]?.id }}"
       },
-      "id": "b74fa955-4008-4f84-89d4-ec16aa9ba0d8",
+      "id": "316a89d2-5e04-4f91-8dc7-2e92861b44be",
       "name": "Get Annotation Queue",
       "position": [
         2160,
@@ -749,7 +677,7 @@
         "showAdvancedFields": true,
         "queryJson": "{\"limit\":1}"
       },
-      "id": "a4f6b50f-0d8d-41fb-900b-de6a4be76187",
+      "id": "12feb188-d813-4989-9a8b-7a828664667a",
       "name": "Custom Request",
       "position": [
         2400,
@@ -773,7 +701,7 @@
         "showAdvancedFields": true,
         "datasetDescription": "Demo dataset created from n8n"
       },
-      "id": "7cc0a7f2-0b67-4c33-83b0-e1b194226d48",
+      "id": "75834c02-4e6e-422e-b508-7542c87ecc36",
       "name": "Create Dataset",
       "position": [
         720,
@@ -799,7 +727,7 @@
         "showAdvancedFields": true,
         "datasetItemId": "={{ $('Setup IDs').item.json.datasetItemId }}"
       },
-      "id": "3c41f08d-5276-440b-8e02-7204b3171662",
+      "id": "b819e94d-d863-4735-b930-8430d8c4281b",
       "name": "Create Dataset Item",
       "position": [
         960,
@@ -822,7 +750,7 @@
         "showAdvancedFields": true,
         "queryJson": "={{ JSON.stringify({ datasetName: $('Setup IDs').item.json.datasetName, limit: 5 }) }}"
       },
-      "id": "d7247406-4911-4723-b122-9d62179d7d82",
+      "id": "a5ec8828-4f41-4897-a392-ea7e846f8b51",
       "name": "List Dataset Items",
       "position": [
         1200,
@@ -846,7 +774,7 @@
         "datasetItemId": "={{ $('Setup IDs').item.json.datasetItemId }}",
         "traceId": "={{ $('Setup IDs').item.json.traceId }}"
       },
-      "id": "bdbd769c-d7fc-4246-bd87-314647815f55",
+      "id": "965ef63d-981b-4ab8-b5cf-a281f9324e13",
       "name": "Create Run Item",
       "position": [
         1440,
@@ -868,7 +796,7 @@
         "operation": "listDatasetRuns",
         "datasetName": "={{ $('Setup IDs').item.json.datasetName }}"
       },
-      "id": "c72f1f79-d41e-4988-bab7-9b2cc3f72510",
+      "id": "3b4f32a7-6560-4f60-b270-200f59cd7ff0",
       "name": "List Dataset Runs",
       "position": [
         1680,
@@ -891,7 +819,7 @@
         "datasetName": "={{ $('Setup IDs').item.json.datasetName }}",
         "runName": "={{ $('Setup IDs').item.json.runName }}"
       },
-      "id": "4274ea5c-a319-49e2-8e51-8e75bb05d25e",
+      "id": "5b169321-c8c7-439a-bc8d-b94ffe97e5f2",
       "name": "Get Dataset Run",
       "position": [
         1920,
@@ -918,7 +846,7 @@
         "promptLabels": "production",
         "promptCommitMessage": "created from the n8n demo"
       },
-      "id": "34feabeb-d2c0-4881-9010-b492a7a09c66",
+      "id": "42077db0-fda1-4e77-92c3-e0fdbf1ef9ec",
       "name": "Create Prompt",
       "position": [
         720,
@@ -941,7 +869,7 @@
         "showAdvancedFields": true,
         "queryJson": "{\"limit\":5}"
       },
-      "id": "d91478c0-1c05-4287-8c01-4f79bf826401",
+      "id": "87fc333f-d6d7-4de8-9224-31d430beb2e3",
       "name": "List Prompts",
       "position": [
         960,
@@ -963,11 +891,99 @@
         "operation": "getPrompt",
         "promptName": "={{ $json.data?.[0]?.name }}"
       },
-      "id": "f7a5d4b2-0bef-4637-997e-28942aedde07",
+      "id": "c7802e25-dfb7-46d6-baf9-6808ded94841",
       "name": "Get Prompt",
       "position": [
         1200,
         860
+      ],
+      "type": "n8n-nodes-langfuse-studio.langfuse",
+      "typeVersion": 2,
+      "credentials": {
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "trace",
+        "operation": "getTrace",
+        "traceId": "={{ $('Setup IDs').item.json.traceId }}"
+      },
+      "id": "5c76e417-03b1-4072-8076-60d93ec058a2",
+      "name": "Get Trace",
+      "position": [
+        3360,
+        1080
+      ],
+      "type": "n8n-nodes-langfuse-studio.langfuse",
+      "typeVersion": 2,
+      "credentials": {
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "observation",
+        "operation": "getObservation",
+        "observationId": "={{ $('Setup IDs').item.json.spanId }}"
+      },
+      "id": "715ad679-dee1-41c1-bfd8-7f77ecb3ff69",
+      "name": "Get Observation",
+      "position": [
+        3600,
+        1080
+      ],
+      "type": "n8n-nodes-langfuse-studio.langfuse",
+      "typeVersion": 2,
+      "credentials": {
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "score",
+        "operation": "getScore",
+        "scoreId": "={{ $('Setup IDs').item.json.scoreId }}"
+      },
+      "id": "c6420639-5dfe-4572-9897-1e0729bb292d",
+      "name": "Get Score",
+      "position": [
+        3840,
+        1080
+      ],
+      "type": "n8n-nodes-langfuse-studio.langfuse",
+      "typeVersion": 2,
+      "credentials": {
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "score",
+        "operation": "deleteScore",
+        "scoreId": "={{ $('Setup IDs').item.json.scoreId }}"
+      },
+      "id": "ca24907c-d129-434d-bbc1-777df8ac9823",
+      "name": "Delete Score",
+      "position": [
+        4080,
+        1080
       ],
       "type": "n8n-nodes-langfuse-studio.langfuse",
       "typeVersion": 2,
@@ -1139,50 +1155,6 @@
         ]
       ]
     },
-    "Wait for Ingestion": {
-      "main": [
-        [
-          {
-            "node": "Get Trace",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get Trace": {
-      "main": [
-        [
-          {
-            "node": "Get Observation",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get Observation": {
-      "main": [
-        [
-          {
-            "node": "Get Score",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get Score": {
-      "main": [
-        [
-          {
-            "node": "Delete Score",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Health": {
       "main": [
         [
@@ -1331,6 +1303,50 @@
         [
           {
             "node": "Get Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Trace": {
+      "main": [
+        [
+          {
+            "node": "Get Observation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Observation": {
+      "main": [
+        [
+          {
+            "node": "Get Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Score": {
+      "main": [
+        [
+          {
+            "node": "Delete Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Ingestion": {
+      "main": [
+        [
+          {
+            "node": "Get Trace",
             "type": "main",
             "index": 0
           }
