@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-06-04
+
+### Changed
+
+- **Improved node picker descriptions.** The `Langfuse` and `Langfuse Trigger` nodes now
+  show a clear, specific description in the n8n node picker instead of the previous
+  generic placeholder text.
+- **Updated README** to reflect all operations added since 1.5.0: `Get Session`,
+  `List`/`Get Score Configs`, `List Annotation Queue Items`, and the five-lane demo workflow.
+
 ## [1.6.0] - 2026-06-04
 
 ### Added
@@ -164,6 +174,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Basic Auth.
 
 [Unreleased]: https://github.com/FilipB97/n8n-langfuse/commits/main
+[1.6.1]: https://www.npmjs.com/package/n8n-nodes-langfuse-studio/v/1.6.1
 [1.6.0]: https://www.npmjs.com/package/n8n-nodes-langfuse-studio/v/1.6.0
 [1.5.1]: https://www.npmjs.com/package/n8n-nodes-langfuse-studio/v/1.5.1
 [1.5.0]: https://www.npmjs.com/package/n8n-nodes-langfuse-studio/v/1.5.0
