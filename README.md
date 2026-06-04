@@ -28,9 +28,10 @@ Langfuse treats the Ingestion API as a legacy path and recommends OpenTelemetry 
 - `List Prompts` / `Get Prompt` / `Create Prompt` (text or chat, with labels, tags, config, and commit message)
 - `List Traces` / `Get Trace`
 - `List Scores` / `Get Score` / `Delete Score`
+- `List Score Configs` / `Get Score Config`
 - `List Observations` / `Get Observation`
-- `List Sessions`
-- `List Annotation Queues` / `Get Annotation Queue`
+- `List Sessions` / `Get Session`
+- `List Annotation Queues` / `Get Annotation Queue` / `List Annotation Queue Items`
 - `Custom Request`
 
 ### Datasets (Public API, v2 only)
@@ -59,12 +60,7 @@ The first poll establishes a baseline (it does not replay history); later polls 
 
 ### From npm
 
-1. Build the package:
-   ```bash
-   npm run compile
-   ```
-2. Publish `n8n-nodes-langfuse-studio` to npm.
-3. In n8n, open Community Nodes and install `n8n-nodes-langfuse-studio`.
+1. In n8n, open **Settings → Community Nodes** and install `n8n-nodes-langfuse-studio`.
 
 ### Local development
 
@@ -102,7 +98,7 @@ Langfuse uses Basic Auth:
 
 See:
 
-- [Grouped demo workflow](docs/example-workflow.md) — importable n8n workflow that fans out into four readable lanes (ingestion, reads, datasets, prompts) with a real OpenAI call ([`example-workflow.json`](docs/example-workflow.json))
+- [Grouped demo workflow](docs/example-workflow.md) — importable n8n workflow that fans out into five readable lanes (ingestion, reads, datasets, prompts, round-trip verification) with a real OpenAI call ([`example-workflow.json`](docs/example-workflow.json))
 - [Dataset evaluation workflow](docs/example-eval-workflow.md) — importable LLM evaluation loop using datasets, dataset runs, and scores ([`example-eval-workflow.json`](docs/example-eval-workflow.json))
 - [Examples](docs/examples.md)
 - [Quick test](docs/quick-test.md)

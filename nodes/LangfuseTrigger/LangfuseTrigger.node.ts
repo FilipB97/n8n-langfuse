@@ -8,7 +8,7 @@ const description: NodeDescription = {
   group: ['trigger'],
   version: 1,
   subtitle: '={{$parameter["event"]}}',
-  description: 'Starts the workflow when new Langfuse records appear',
+  description: 'Starts the workflow when new traces, scores, or observations appear in Langfuse.',
   defaults: { name: 'Langfuse Trigger' },
   polling: true,
   inputs: [],
