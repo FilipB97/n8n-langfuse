@@ -380,3 +380,44 @@ test('resolveLangfusePublicApiEndpoint validates createPrompt required fields', 
     /promptChatJson is required/i,
   );
 });
+
+// --- Session, Score Configs, Annotation Queue Items ---
+
+test('resolveLangfusePublicApiEndpoint resolves getSession with ID', () => {
+  assert.deepEqual(
+    resolveLangfusePublicApiEndpoint('getSession', { sessionId: 'sess-abc' }),
+    { path: '/sessions/sess-abc', method: 'GET' },
+  );
+  assert.throws(() => resolveLangfusePublicApiEndpoint('getSession', {}), /sessionId is required/i);
+});
+
+test('resolveLangfusePublicApiEndpoint resolves listScoreConfigs with optional query', () => {
+  assert.deepEqual(
+    resolveLangfusePublicApiEndpoint('listScoreConfigs', {}),
+    { path: '/score-configs', method: 'GET' },
+  );
+  assert.deepEqual(
+    resolveLangfusePublicApiEndpoint('listScoreConfigs', { queryJson: '{"limit":5}' }),
+    { path: '/score-configs', method: 'GET', query: { limit: 5 } },
+  );
+});
+
+test('resolveLangfusePublicApiEndpoint resolves getScoreConfig with ID', () => {
+  assert.deepEqual(
+    resolveLangfusePublicApiEndpoint('getScoreConfig', { scoreConfigId: 'cfg-1' }),
+    { path: '/score-configs/cfg-1', method: 'GET' },
+  );
+  assert.throws(() => resolveLangfusePublicApiEndpoint('getScoreConfig', {}), /scoreConfigId is required/i);
+});
+
+test('resolveLangfusePublicApiEndpoint resolves listAnnotationQueueItems with queue ID and optional query', () => {
+  assert.deepEqual(
+    resolveLangfusePublicApiEndpoint('listAnnotationQueueItems', { queueId: 'q-1' }),
+    { path: '/annotation-queues/q-1/items', method: 'GET' },
+  );
+  assert.deepEqual(
+    resolveLangfusePublicApiEndpoint('listAnnotationQueueItems', { queueId: 'q-1', queryJson: '{"page":2}' }),
+    { path: '/annotation-queues/q-1/items', method: 'GET', query: { page: 2 } },
+  );
+  assert.throws(() => resolveLangfusePublicApiEndpoint('listAnnotationQueueItems', {}), /queueId is required/i);
+});

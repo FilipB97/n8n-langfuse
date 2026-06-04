@@ -15,8 +15,12 @@ export type LangfusePublicApiOperation =
   | 'listObservations'
   | 'getObservation'
   | 'listSessions'
+  | 'getSession'
   | 'listAnnotationQueues'
   | 'getAnnotationQueue'
+  | 'listAnnotationQueueItems'
+  | 'listScoreConfigs'
+  | 'getScoreConfig'
   | 'listDatasets'
   | 'getDataset'
   | 'createDataset'
@@ -65,6 +69,8 @@ export interface LangfusePublicApiParameters {
   scoreId?: string;
   observationId?: string;
   queueId?: string;
+  sessionId?: string;
+  scoreConfigId?: string;
   datasetName?: string;
   datasetItemId?: string;
   runName?: string;
@@ -329,6 +335,49 @@ export function resolveLangfusePublicApiEndpoint(
 
       return {
         path: `/annotation-queues/${encodeURIComponent(queueId)}`,
+        method: 'GET',
+      };
+    }
+    case 'listAnnotationQueueItems': {
+      const queueId = asString(params.queueId);
+      if (queueId === undefined) {
+        throw new Error('queueId is required for listAnnotationQueueItems');
+      }
+
+      const query = asQueryObject(params.queryJson);
+      return {
+        path: `/annotation-queues/${encodeURIComponent(queueId)}/items`,
+        method: 'GET',
+        ...(query !== undefined ? { query } : {}),
+      };
+    }
+    case 'getSession': {
+      const sessionId = asString(params.sessionId);
+      if (sessionId === undefined) {
+        throw new Error('sessionId is required for getSession');
+      }
+
+      return {
+        path: `/sessions/${encodeURIComponent(sessionId)}`,
+        method: 'GET',
+      };
+    }
+    case 'listScoreConfigs': {
+      const query = asQueryObject(params.queryJson);
+      return {
+        path: '/score-configs',
+        method: 'GET',
+        ...(query !== undefined ? { query } : {}),
+      };
+    }
+    case 'getScoreConfig': {
+      const scoreConfigId = asString(params.scoreConfigId);
+      if (scoreConfigId === undefined) {
+        throw new Error('scoreConfigId is required for getScoreConfig');
+      }
+
+      return {
+        path: `/score-configs/${encodeURIComponent(scoreConfigId)}`,
         method: 'GET',
       };
     }

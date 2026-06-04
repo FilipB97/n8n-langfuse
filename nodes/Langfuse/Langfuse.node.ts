@@ -148,10 +148,27 @@ function buildPublicApiParameters(
     case 'listObservations':
     case 'listSessions':
     case 'listAnnotationQueues':
+    case 'listScoreConfigs':
     case 'listDatasets':
     case 'listDatasetItems':
       params.queryJson = getOptionalNodeParameter(context, 'queryJson', itemIndex);
       break;
+    case 'getSession': {
+      const sessionId = asString(getOptionalNodeParameter(context, 'sessionId', itemIndex));
+      if (sessionId !== undefined) params.sessionId = sessionId;
+      break;
+    }
+    case 'getScoreConfig': {
+      const scoreConfigId = asString(getOptionalNodeParameter(context, 'scoreConfigId', itemIndex));
+      if (scoreConfigId !== undefined) params.scoreConfigId = scoreConfigId;
+      break;
+    }
+    case 'listAnnotationQueueItems': {
+      const queueId = asString(getOptionalNodeParameter(context, 'queueId', itemIndex));
+      if (queueId !== undefined) params.queueId = queueId;
+      params.queryJson = getOptionalNodeParameter(context, 'queryJson', itemIndex);
+      break;
+    }
     case 'getPrompt': {
       const promptName = asString(getOptionalNodeParameter(context, 'promptName', itemIndex));
       const promptLabel = asString(getOptionalNodeParameter(context, 'promptLabel', itemIndex));
@@ -459,11 +476,15 @@ const v1Description: NodeDescription = {
         { name: 'Get Observation', value: 'getObservation', action: 'Get observation', description: 'Read a single observation by ID' },
         { name: 'Get Prompt', value: 'getPrompt', action: 'Get prompt', description: 'Read a specific prompt' },
         { name: 'Get Score', value: 'getScore', action: 'Get score', description: 'Read a single score by ID' },
+        { name: 'Get Score Config', value: 'getScoreConfig', action: 'Get score config', description: 'Read a single score configuration by ID' },
+        { name: 'Get Session', value: 'getSession', action: 'Get session', description: 'Read a single session by ID' },
         { name: 'Get Trace', value: 'getTrace', action: 'Get trace', description: 'Read a single trace by ID' },
         { name: 'Health', value: 'health', action: 'Check health', description: 'Call the Langfuse health endpoint' },
+        { name: 'List Annotation Queue Items', value: 'listAnnotationQueueItems', action: 'List annotation queue items', description: 'Read items in an annotation queue' },
         { name: 'List Annotation Queues', value: 'listAnnotationQueues', action: 'List annotation queues', description: 'Read annotation queues' },
         { name: 'List Observations', value: 'listObservations', action: 'List observations', description: 'Read observations from Langfuse' },
         { name: 'List Prompts', value: 'listPrompts', action: 'List prompts', description: 'Read all prompts' },
+        { name: 'List Score Configs', value: 'listScoreConfigs', action: 'List score configs', description: 'Read all score configurations' },
         { name: 'List Scores', value: 'listScores', action: 'List scores', description: 'Read scores from Langfuse' },
         { name: 'List Sessions', value: 'listSessions', action: 'List sessions', description: 'Read sessions from Langfuse' },
         { name: 'List Traces', value: 'listTraces', action: 'List traces', description: 'Read traces from Langfuse' },
@@ -540,14 +561,16 @@ const v1Description: NodeDescription = {
       options: [{ name: 'Debug', value: 'debug' }, { name: 'Info', value: 'info' }, { name: 'Warn', value: 'warn' }, { name: 'Error', value: 'error' }],
       description: 'Log severity for the SDK log event', displayOptions: showIngestionBasic('sdkLogCreate'),
     },
-    { displayName: 'Queue ID', name: 'queueId', type: 'string', default: '', description: 'Annotation queue ID to fetch', displayOptions: showPublicApiBasic('getAnnotationQueue') },
+    { displayName: 'Queue ID', name: 'queueId', type: 'string', default: '', description: 'Annotation queue ID to fetch or list items from', displayOptions: showPublicApiBasic('getAnnotationQueue', 'listAnnotationQueueItems') },
+    { displayName: 'Session ID', name: 'sessionId', type: 'string', default: '', description: 'Session ID to fetch', displayOptions: showPublicApiBasic('getSession') },
+    { displayName: 'Score Config ID', name: 'scoreConfigId', type: 'string', default: '', description: 'Score config ID to fetch', displayOptions: showPublicApiBasic('getScoreConfig') },
     { displayName: 'Path', name: 'path', type: 'string', default: '', placeholder: '/v2/prompts', description: 'Relative Langfuse Public API path for a custom request', displayOptions: showPublicApiBasic('customRequest') },
     {
       displayName: 'Method', name: 'method', type: 'options', default: 'GET',
       options: [{ name: 'DELETE', value: 'DELETE' }, { name: 'GET', value: 'GET' }, { name: 'PATCH', value: 'PATCH' }, { name: 'POST', value: 'POST' }, { name: 'PUT', value: 'PUT' }],
       description: 'HTTP method for the custom request', displayOptions: showPublicApiBasic('customRequest'),
     },
-    { displayName: 'Query JSON', name: 'queryJson', type: 'string', default: '', placeholder: '{"page":1,"limit":20}', description: 'JSON object converted into query string parameters', displayOptions: showPublicApi('listPrompts', 'listTraces', 'listScores', 'listObservations', 'listSessions', 'listAnnotationQueues', 'customRequest') },
+    { displayName: 'Query JSON', name: 'queryJson', type: 'string', default: '', placeholder: '{"page":1,"limit":20}', description: 'JSON object converted into query string parameters', displayOptions: showPublicApi('listPrompts', 'listTraces', 'listScores', 'listObservations', 'listSessions', 'listAnnotationQueues', 'listAnnotationQueueItems', 'listScoreConfigs', 'customRequest') },
     { displayName: 'Body JSON', name: 'bodyJson', type: 'string', default: '', placeholder: '{"name":"prompt-name"}', description: 'JSON request body for Custom Request. Ignored for GET and HEAD requests.', displayOptions: showPublicApi('customRequest') },
     { displayName: 'Batch JSON', name: 'batchJson', type: 'string', default: '', placeholder: '{"batch":[{"ID":"evt-1","type":"event-create"}]}', description: 'Raw Langfuse ingestion batch sent without mapping fields', displayOptions: showIngestionBasic('batchRaw') },
     { displayName: 'Fail On Batch Errors', name: 'failOnBatchErrors', type: 'boolean', default: false, description: 'Whether to fail the item when Langfuse returns partial ingestion errors', displayOptions: showIngestion('traceCreate', 'spanCreate', 'spanUpdate', 'generationCreate', 'generationUpdate', 'finalizeSpan', 'eventCreate', 'scoreCreate', 'sdkLogCreate', 'batchRaw') },
@@ -633,9 +656,11 @@ const v2Description: NodeDescription = {
       displayOptions: { show: { resource: ['score'] } },
       options: [
         { name: 'Create', value: 'scoreCreate', action: 'Create score', description: 'Send a score-create ingestion event' },
-        { name: 'Get', value: 'getScore', action: 'Get score by ID', description: 'Read a single score by ID (Public API)' },
-        { name: 'List', value: 'listScores', action: 'List scores', description: 'Read scores from Langfuse (Public API)' },
         { name: 'Delete', value: 'deleteScore', action: 'Delete score', description: 'Delete a score by ID (Public API)' },
+        { name: 'Get', value: 'getScore', action: 'Get score by ID', description: 'Read a single score by ID (Public API)' },
+        { name: 'Get Score Config', value: 'getScoreConfig', action: 'Get score config by ID', description: 'Read a single score configuration by ID (Public API)' },
+        { name: 'List', value: 'listScores', action: 'List scores', description: 'Read scores from Langfuse (Public API)' },
+        { name: 'List Score Configs', value: 'listScoreConfigs', action: 'List score configs', description: 'Read all score configurations (Public API)' },
       ],
       description: 'Choose the score operation',
     },
@@ -653,6 +678,7 @@ const v2Description: NodeDescription = {
       displayName: 'Operation', name: 'operation', type: 'options', default: 'listSessions', noDataExpression: true,
       displayOptions: { show: { resource: ['session'] } },
       options: [
+        { name: 'Get', value: 'getSession', action: 'Get session by ID', description: 'Read a single session by ID' },
         { name: 'List', value: 'listSessions', action: 'List sessions', description: 'Read sessions from Langfuse' },
       ],
       description: 'Choose the session operation',
@@ -672,6 +698,7 @@ const v2Description: NodeDescription = {
       options: [
         { name: 'Get', value: 'getAnnotationQueue', action: 'Get annotation queue', description: 'Read a single annotation queue by ID' },
         { name: 'List', value: 'listAnnotationQueues', action: 'List annotation queues', description: 'Read all annotation queues' },
+        { name: 'List Items', value: 'listAnnotationQueueItems', action: 'List annotation queue items', description: 'Read items in an annotation queue' },
       ],
       description: 'Choose the annotation queue operation',
     },
@@ -800,7 +827,9 @@ const v2Description: NodeDescription = {
       options: [{ name: 'Debug', value: 'debug' }, { name: 'Info', value: 'info' }, { name: 'Warn', value: 'warn' }, { name: 'Error', value: 'error' }],
       description: 'Log severity for the SDK log event', displayOptions: v2Basic('sdkLogCreate'),
     },
-    { displayName: 'Queue ID', name: 'queueId', type: 'string', default: '', description: 'Annotation queue ID to fetch', displayOptions: v2Basic('getAnnotationQueue') },
+    { displayName: 'Queue ID', name: 'queueId', type: 'string', default: '', description: 'Annotation queue ID to fetch or list items from', displayOptions: v2Basic('getAnnotationQueue', 'listAnnotationQueueItems') },
+    { displayName: 'Session ID', name: 'sessionId', type: 'string', default: '', description: 'Session ID to fetch', displayOptions: v2Basic('getSession') },
+    { displayName: 'Score Config ID', name: 'scoreConfigId', type: 'string', default: '', description: 'Score config ID to fetch', displayOptions: v2Basic('getScoreConfig') },
 
     // ---- Dataset fields ----
     { displayName: 'Dataset Name', name: 'datasetName', type: 'string', default: '', required: true, placeholder: 'qa-eval-set', description: 'Name of the dataset', displayOptions: v2Basic('getDataset', 'createDataset', 'createDatasetItem', 'listDatasetRuns', 'getDatasetRun', 'deleteDatasetRun') },
@@ -828,7 +857,7 @@ const v2Description: NodeDescription = {
       options: [{ name: 'DELETE', value: 'DELETE' }, { name: 'GET', value: 'GET' }, { name: 'PATCH', value: 'PATCH' }, { name: 'POST', value: 'POST' }, { name: 'PUT', value: 'PUT' }],
       description: 'HTTP method for the custom request', displayOptions: v2Basic('customRequest'),
     },
-    { displayName: 'Query JSON', name: 'queryJson', type: 'string', default: '', placeholder: '{"page":1,"limit":20}', description: 'JSON object converted into query string parameters', displayOptions: v2Adv('listPrompts', 'listTraces', 'listScores', 'listObservations', 'listSessions', 'listAnnotationQueues', 'listDatasets', 'listDatasetItems', 'listDatasetRuns', 'customRequest') },
+    { displayName: 'Query JSON', name: 'queryJson', type: 'string', default: '', placeholder: '{"page":1,"limit":20}', description: 'JSON object converted into query string parameters', displayOptions: v2Adv('listPrompts', 'listTraces', 'listScores', 'listObservations', 'listSessions', 'listAnnotationQueues', 'listAnnotationQueueItems', 'listScoreConfigs', 'listDatasets', 'listDatasetItems', 'listDatasetRuns', 'customRequest') },
     { displayName: 'Body JSON', name: 'bodyJson', type: 'string', default: '', placeholder: '{"name":"prompt-name"}', description: 'JSON request body for Custom Request. Ignored for GET and HEAD requests.', displayOptions: v2Adv('customRequest') },
     { displayName: 'Batch JSON', name: 'batchJson', type: 'string', default: '', placeholder: '{"batch":[{"ID":"evt-1","type":"event-create"}]}', description: 'Raw Langfuse ingestion batch sent without mapping fields', displayOptions: v2Basic('batchRaw') },
     { displayName: 'Fail On Batch Errors', name: 'failOnBatchErrors', type: 'boolean', default: false, description: 'Whether to fail the item when Langfuse returns partial ingestion errors', displayOptions: v2Adv('traceCreate', 'spanCreate', 'spanUpdate', 'generationCreate', 'generationUpdate', 'finalizeSpan', 'eventCreate', 'scoreCreate', 'sdkLogCreate', 'batchRaw') },
