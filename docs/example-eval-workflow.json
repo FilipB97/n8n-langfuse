@@ -1,0 +1,387 @@
+{
+  "name": "Langfuse Studio — Dataset Evaluation",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Langfuse Studio — Dataset Evaluation\n\nRuns a full **LLM evaluation loop** with Langfuse datasets:\n\n1. **Create Dataset** once.\n2. **Build Test Cases** fans out into several cases (question + expected answer).\n3. **OpenAI Chat** answers each question.\n4. **Grade** compares the answer to the expected value (exact-match → 1/0).\n5. Per case: **Create Trace** → **Create Dataset Item** (upsert) → **Create Run Item** (links the item + trace into the run) → **Score Result** (attaches the grade to the trace).\n6. **Get Dataset Run** reads the run back.\n\n### Before running\n1. Install the community node `n8n-nodes-langfuse-studio` (>= 1.3.0).\n2. Set your **Langfuse API** credential on every Langfuse node.\n3. Set your **OpenAI** credential on the OpenAI Chat node.\n\n### Notes\n- Each case flows through as its own item; `pairedItem` keeps the per-case ids\n  aligned, so every Langfuse node reads its values from `$('Grade').item`.\n- Dataset Public API writes are synchronous, so the run is readable immediately.\n  The score is sent via async ingestion, so it may appear in the run a moment later.\n- Every Langfuse node uses *Continue On Error*, so one failure never stops the run.",
+        "height": 520,
+        "width": 560
+      },
+      "id": "00000000-0000-0000-0000-0000000000s1",
+      "name": "README",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -360,
+        -300
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "00000000-0000-0000-0000-000000000001",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c1",
+              "name": "datasetName",
+              "value": "n8n-eval-demo",
+              "type": "string"
+            },
+            {
+              "id": "c2",
+              "name": "runName",
+              "value": "=run-{{ $now.toFormat('yyyyLLdd-HHmmss') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "00000000-0000-0000-0000-000000000002",
+      "name": "Set Run Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "dataset",
+        "operation": "createDataset",
+        "datasetName": "={{ $json.datasetName }}",
+        "showAdvancedFields": true,
+        "datasetDescription": "Demo evaluation dataset created from n8n"
+      },
+      "id": "00000000-0000-0000-0000-000000000003",
+      "name": "Create Dataset",
+      "type": "n8n-nodes-langfuse-studio.langfuse",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ],
+      "credentials": {
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const cfg = $('Set Run Config').first().json;\nconst stamp = Date.now();\nconst cases = [\n  { question: 'What is the capital of France? Answer with one word.', expected: 'Paris' },\n  { question: 'What is 2 + 2? Answer with just the number.', expected: '4' },\n  { question: 'Which planet is known as the Red Planet? One word.', expected: 'Mars' },\n];\nreturn cases.map((c, i) => ({\n  json: {\n    datasetName: cfg.datasetName,\n    runName: cfg.runName,\n    question: c.question,\n    expected: c.expected,\n    itemId: 'eval-' + stamp + '-' + i,\n    traceId: 'eval-trace-' + stamp + '-' + i,\n  },\n}));"
+      },
+      "id": "00000000-0000-0000-0000-000000000004",
+      "name": "Build Test Cases",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $json.question }}",
+              "role": "user"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "00000000-0000-0000-0000-000000000005",
+      "name": "OpenAI Chat",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        800,
+        300
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "REPLACE_OPENAI_CRED",
+          "name": "OpenAi account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const tc = $('Build Test Cases').item.json;\nconst out = $json;\nconst answer = (out.message && out.message.content) || out.text || out.content || (typeof out === 'string' ? out : JSON.stringify(out));\nconst expected = String(tc.expected || '');\nconst match = String(answer).toLowerCase().includes(expected.toLowerCase()) ? 1 : 0;\nreturn {\n  json: {\n    datasetName: tc.datasetName,\n    runName: tc.runName,\n    question: tc.question,\n    expected: expected,\n    itemId: tc.itemId,\n    traceId: tc.traceId,\n    answer: String(answer),\n    score: match,\n  },\n};"
+      },
+      "id": "00000000-0000-0000-0000-000000000006",
+      "name": "Grade",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "trace",
+        "operation": "traceCreate",
+        "traceId": "={{ $('Grade').item.json.traceId }}",
+        "name": "eval-case",
+        "inputJson": "={{ JSON.stringify({ question: $('Grade').item.json.question }) }}",
+        "outputJson": "={{ JSON.stringify({ answer: $('Grade').item.json.answer }) }}"
+      },
+      "id": "00000000-0000-0000-0000-000000000007",
+      "name": "Create Trace",
+      "type": "n8n-nodes-langfuse-studio.langfuse",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        300
+      ],
+      "credentials": {
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "datasetItem",
+        "operation": "createDatasetItem",
+        "datasetName": "={{ $('Grade').item.json.datasetName }}",
+        "inputJson": "={{ JSON.stringify({ question: $('Grade').item.json.question }) }}",
+        "expectedOutputJson": "={{ JSON.stringify({ answer: $('Grade').item.json.expected }) }}",
+        "showAdvancedFields": true,
+        "datasetItemId": "={{ $('Grade').item.json.itemId }}"
+      },
+      "id": "00000000-0000-0000-0000-000000000008",
+      "name": "Create Dataset Item",
+      "type": "n8n-nodes-langfuse-studio.langfuse",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        300
+      ],
+      "credentials": {
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "datasetRun",
+        "operation": "createDatasetRunItem",
+        "runName": "={{ $('Grade').item.json.runName }}",
+        "datasetItemId": "={{ $('Grade').item.json.itemId }}",
+        "traceId": "={{ $('Grade').item.json.traceId }}"
+      },
+      "id": "00000000-0000-0000-0000-000000000009",
+      "name": "Create Run Item",
+      "type": "n8n-nodes-langfuse-studio.langfuse",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        300
+      ],
+      "credentials": {
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "score",
+        "operation": "scoreCreate",
+        "traceId": "={{ $('Grade').item.json.traceId }}",
+        "scoreName": "exact_match",
+        "scoreValue": "={{ $('Grade').item.json.score }}",
+        "scoreDataType": "NUMERIC",
+        "showAdvancedFields": true,
+        "scoreComment": "={{ 'answer: ' + $('Grade').item.json.answer }}"
+      },
+      "id": "00000000-0000-0000-0000-000000000010",
+      "name": "Score Result",
+      "type": "n8n-nodes-langfuse-studio.langfuse",
+      "typeVersion": 2,
+      "position": [
+        1800,
+        300
+      ],
+      "credentials": {
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "datasetRun",
+        "operation": "getDatasetRun",
+        "datasetName": "={{ $('Grade').item.json.datasetName }}",
+        "runName": "={{ $('Grade').item.json.runName }}"
+      },
+      "id": "00000000-0000-0000-0000-000000000011",
+      "name": "Get Dataset Run",
+      "type": "n8n-nodes-langfuse-studio.langfuse",
+      "typeVersion": 2,
+      "position": [
+        2000,
+        300
+      ],
+      "credentials": {
+        "langfuseApi": {
+          "id": "REPLACE_LANGFUSE_CRED",
+          "name": "Langfuse account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set Run Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Run Config": {
+      "main": [
+        [
+          {
+            "node": "Create Dataset",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Dataset": {
+      "main": [
+        [
+          {
+            "node": "Build Test Cases",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Test Cases": {
+      "main": [
+        [
+          {
+            "node": "OpenAI Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat": {
+      "main": [
+        [
+          {
+            "node": "Grade",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Grade": {
+      "main": [
+        [
+          {
+            "node": "Create Trace",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Trace": {
+      "main": [
+        [
+          {
+            "node": "Create Dataset Item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Dataset Item": {
+      "main": [
+        [
+          {
+            "node": "Create Run Item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Run Item": {
+      "main": [
+        [
+          {
+            "node": "Score Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score Result": {
+      "main": [
+        [
+          {
+            "node": "Get Dataset Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

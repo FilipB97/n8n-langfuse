@@ -2,7 +2,7 @@
 
 A custom n8n community node for Langfuse. The node is **versioned**:
 
-- **v2 (default)** groups actions by entity — `Trace`, `Span`, `Generation`, `Score`, `Prompt`, `Session`, `Observation`, `Annotation Queue`, and `System` — so the operation list under each resource stays short and focused.
+- **v2 (default)** groups actions by entity — `Trace`, `Span`, `Generation`, `Score`, `Prompt`, `Session`, `Observation`, `Annotation Queue`, `Dataset`, `Dataset Item`, `Dataset Run`, and `System` — so the operation list under each resource stays short and focused.
 - **v1** keeps the original two-resource layout (`Ingestion` / `Public API`). Existing workflows built on v1 keep working unchanged.
 
 Langfuse treats the Ingestion API as a legacy path and recommends OpenTelemetry for future telemetry integrations. This node is still useful when you want direct control over ingestion payloads or when you need to read Langfuse data from inside a workflow.
@@ -32,6 +32,16 @@ Langfuse treats the Ingestion API as a legacy path and recommends OpenTelemetry 
 - `List Sessions`
 - `List Annotation Queues` / `Get Annotation Queue`
 - `Custom Request`
+
+### Datasets (Public API, v2 only)
+
+For building and running LLM evaluation sets:
+
+- `Dataset`: `Create` / `Get` / `List`
+- `Dataset Item`: `Create` (upsert) / `Get` / `List` / `Delete`
+- `Dataset Run`: `List` / `Get` / `Delete` / `Create Run Item`
+
+A typical eval loop: create a dataset → add items → run your workflow per item → link each result with `Create Run Item` → read results via `Get Dataset Run`.
 
 All requests retry automatically with exponential backoff on retryable responses (`429`, `500`, `502`, `503`, `504`).
 
@@ -83,6 +93,7 @@ Langfuse uses Basic Auth:
 See:
 
 - [Full demo workflow](docs/example-workflow.md) — importable n8n workflow that runs every operation end-to-end with a real OpenAI call ([`example-workflow.json`](docs/example-workflow.json))
+- [Dataset evaluation workflow](docs/example-eval-workflow.md) — importable LLM evaluation loop using datasets, dataset runs, and scores ([`example-eval-workflow.json`](docs/example-eval-workflow.json))
 - [Examples](docs/examples.md)
 - [Quick test](docs/quick-test.md)
 - [Ingestion coverage](docs/api-coverage.md)

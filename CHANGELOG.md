@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-06-04
+
+### Added
+
+- **Dataset evaluation example workflow** (`docs/example-eval-workflow.json`) — an
+  importable LLM evaluation loop that runs OpenAI over a set of test cases and
+  records traces, dataset items, dataset run items, and exact-match scores.
+
+### Changed
+
+- The node now sets `pairedItem` on every output, so multi-item workflows can
+  reliably reference per-item values across nodes (e.g. `$('Node').item`).
+
+## [1.3.0] - 2026-06-04
+
+### Added
+
+- **Dataset API support (node v2).** Three new entity resources cover the full
+  Langfuse evaluation loop:
+  - **Dataset** — `Create`, `Get`, `List` (`/api/public/v2/datasets`).
+  - **Dataset Item** — `Create` (upsert), `Get`, `List`, `Delete`
+    (`/api/public/dataset-items`).
+  - **Dataset Run** — `List`, `Get`, `Delete`, and `Create Run Item`
+    (`/api/public/datasets/{name}/runs` and `/api/public/dataset-run-items`).
+
 ### Fixed
 
 - npm scripts (`compile`, `test`, `lint`) now resolve `tsc`/`tsx` from the local
@@ -71,7 +96,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Langfuse API` credentials (Base URL, Public Key, Secret Key, Timeout) using
   Basic Auth.
 
-[Unreleased]: https://github.com/FilipB97/n8n-langfuse/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/FilipB97/n8n-langfuse/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/FilipB97/n8n-langfuse/releases/tag/v1.4.0
+[1.3.0]: https://github.com/FilipB97/n8n-langfuse/releases/tag/v1.3.0
 [1.2.0]: https://github.com/FilipB97/n8n-langfuse/releases/tag/v1.2.0
 [1.1.0]: https://github.com/FilipB97/n8n-langfuse/releases/tag/v1.1.0
 [1.0.5]: https://github.com/FilipB97/n8n-langfuse/releases/tag/v1.0.5

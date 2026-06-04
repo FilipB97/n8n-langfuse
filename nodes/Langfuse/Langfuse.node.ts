@@ -148,6 +148,8 @@ function buildPublicApiParameters(
     case 'listObservations':
     case 'listSessions':
     case 'listAnnotationQueues':
+    case 'listDatasets':
+    case 'listDatasetItems':
       params.queryJson = getOptionalNodeParameter(context, 'queryJson', itemIndex);
       break;
     case 'getPrompt': {
@@ -178,6 +180,69 @@ function buildPublicApiParameters(
     case 'getAnnotationQueue': {
       const queueId = asString(getOptionalNodeParameter(context, 'queueId', itemIndex));
       if (queueId !== undefined) params.queueId = queueId;
+      break;
+    }
+    case 'getDataset': {
+      const datasetName = asString(getOptionalNodeParameter(context, 'datasetName', itemIndex));
+      if (datasetName !== undefined) params.datasetName = datasetName;
+      break;
+    }
+    case 'createDataset': {
+      const datasetName = asString(getOptionalNodeParameter(context, 'datasetName', itemIndex));
+      const datasetDescription = asString(getOptionalNodeParameter(context, 'datasetDescription', itemIndex));
+      if (datasetName !== undefined) params.datasetName = datasetName;
+      if (datasetDescription !== undefined) params.datasetDescription = datasetDescription;
+      params.metadataJson = getOptionalNodeParameter(context, 'metadataJson', itemIndex);
+      break;
+    }
+    case 'getDatasetItem':
+    case 'deleteDatasetItem': {
+      const datasetItemId = asString(getOptionalNodeParameter(context, 'datasetItemId', itemIndex));
+      if (datasetItemId !== undefined) params.datasetItemId = datasetItemId;
+      break;
+    }
+    case 'createDatasetItem': {
+      const datasetName = asString(getOptionalNodeParameter(context, 'datasetName', itemIndex));
+      const datasetItemId = asString(getOptionalNodeParameter(context, 'datasetItemId', itemIndex));
+      const datasetItemStatus = asString(getOptionalNodeParameter(context, 'datasetItemStatus', itemIndex));
+      const sourceTraceId = asString(getOptionalNodeParameter(context, 'sourceTraceId', itemIndex));
+      const sourceObservationId = asString(getOptionalNodeParameter(context, 'sourceObservationId', itemIndex));
+      if (datasetName !== undefined) params.datasetName = datasetName;
+      if (datasetItemId !== undefined) params.datasetItemId = datasetItemId;
+      if (datasetItemStatus !== undefined) params.datasetItemStatus = datasetItemStatus;
+      if (sourceTraceId !== undefined) params.sourceTraceId = sourceTraceId;
+      if (sourceObservationId !== undefined) params.sourceObservationId = sourceObservationId;
+      params.inputJson = getOptionalNodeParameter(context, 'inputJson', itemIndex);
+      params.expectedOutputJson = getOptionalNodeParameter(context, 'expectedOutputJson', itemIndex);
+      params.metadataJson = getOptionalNodeParameter(context, 'metadataJson', itemIndex);
+      break;
+    }
+    case 'listDatasetRuns': {
+      const datasetName = asString(getOptionalNodeParameter(context, 'datasetName', itemIndex));
+      if (datasetName !== undefined) params.datasetName = datasetName;
+      params.queryJson = getOptionalNodeParameter(context, 'queryJson', itemIndex);
+      break;
+    }
+    case 'getDatasetRun':
+    case 'deleteDatasetRun': {
+      const datasetName = asString(getOptionalNodeParameter(context, 'datasetName', itemIndex));
+      const runName = asString(getOptionalNodeParameter(context, 'runName', itemIndex));
+      if (datasetName !== undefined) params.datasetName = datasetName;
+      if (runName !== undefined) params.runName = runName;
+      break;
+    }
+    case 'createDatasetRunItem': {
+      const runName = asString(getOptionalNodeParameter(context, 'runName', itemIndex));
+      const datasetItemId = asString(getOptionalNodeParameter(context, 'datasetItemId', itemIndex));
+      const traceId = asString(getOptionalNodeParameter(context, 'traceId', itemIndex));
+      const observationId = asString(getOptionalNodeParameter(context, 'observationId', itemIndex));
+      const runDescription = asString(getOptionalNodeParameter(context, 'runDescription', itemIndex));
+      if (runName !== undefined) params.runName = runName;
+      if (datasetItemId !== undefined) params.datasetItemId = datasetItemId;
+      if (traceId !== undefined) params.traceId = traceId;
+      if (observationId !== undefined) params.observationId = observationId;
+      if (runDescription !== undefined) params.runDescription = runDescription;
+      params.metadataJson = getOptionalNodeParameter(context, 'metadataJson', itemIndex);
       break;
     }
     case 'customRequest': {
@@ -243,6 +308,7 @@ async function runExecute(this: LangfuseExecuteContext): Promise<Array<Array<Nod
             errors: response.errors,
             raw: response.raw,
           },
+          pairedItem: { item: itemIndex },
         });
         continue;
       }
@@ -272,6 +338,7 @@ async function runExecute(this: LangfuseExecuteContext): Promise<Array<Array<Nod
           data: response.data,
           raw: response.raw,
         },
+        pairedItem: { item: itemIndex },
       });
     } catch (error) {
       if (this.continueOnFail?.()) {
@@ -282,6 +349,7 @@ async function runExecute(this: LangfuseExecuteContext): Promise<Array<Array<Nod
             ok: false,
             error: asErrorMessage(error),
           },
+          pairedItem: { item: itemIndex },
         });
         continue;
       }
@@ -507,6 +575,9 @@ const v2Description: NodeDescription = {
         { name: 'Session', value: 'session', description: 'List sessions from the Public API.' },
         { name: 'Observation', value: 'observation', description: 'Read and list observations from the Public API.' },
         { name: 'Annotation Queue', value: 'queue', description: 'Read and list annotation queues from the Public API.' },
+        { name: 'Dataset', value: 'dataset', description: 'Create, read, and list datasets.' },
+        { name: 'Dataset Item', value: 'datasetItem', description: 'Create, read, list, or delete dataset items.' },
+        { name: 'Dataset Run', value: 'datasetRun', description: 'Read, list, or delete dataset runs and link run items.' },
         { name: 'System', value: 'system', description: 'Health check, SDK logs, raw batches, and custom requests.' },
       ],
       description: 'Choose which Langfuse entity to work with.',
@@ -589,6 +660,38 @@ const v2Description: NodeDescription = {
       description: 'Choose the annotation queue operation.',
     },
     {
+      displayName: 'Operation', name: 'operation', type: 'options', default: 'listDatasets', noDataExpression: true,
+      displayOptions: { show: { resource: ['dataset'] } },
+      options: [
+        { name: 'Create', value: 'createDataset', action: 'Create dataset', description: 'Create a dataset (Public API).' },
+        { name: 'Get', value: 'getDataset', action: 'Get dataset by name', description: 'Read a single dataset by name (Public API).' },
+        { name: 'List', value: 'listDatasets', action: 'List datasets', description: 'Read all datasets (Public API).' },
+      ],
+      description: 'Choose the dataset operation.',
+    },
+    {
+      displayName: 'Operation', name: 'operation', type: 'options', default: 'listDatasetItems', noDataExpression: true,
+      displayOptions: { show: { resource: ['datasetItem'] } },
+      options: [
+        { name: 'Create', value: 'createDatasetItem', action: 'Create dataset item', description: 'Create or upsert a dataset item (Public API).' },
+        { name: 'Get', value: 'getDatasetItem', action: 'Get dataset item by ID', description: 'Read a single dataset item by ID (Public API).' },
+        { name: 'List', value: 'listDatasetItems', action: 'List dataset items', description: 'Read dataset items, optionally filtered by dataset (Public API).' },
+        { name: 'Delete', value: 'deleteDatasetItem', action: 'Delete dataset item', description: 'Delete a dataset item by ID (Public API).' },
+      ],
+      description: 'Choose the dataset item operation.',
+    },
+    {
+      displayName: 'Operation', name: 'operation', type: 'options', default: 'listDatasetRuns', noDataExpression: true,
+      displayOptions: { show: { resource: ['datasetRun'] } },
+      options: [
+        { name: 'Create Run Item', value: 'createDatasetRunItem', action: 'Create dataset run item', description: 'Link a dataset item and trace into a run (Public API).' },
+        { name: 'Get', value: 'getDatasetRun', action: 'Get dataset run', description: 'Read a single dataset run by name (Public API).' },
+        { name: 'List', value: 'listDatasetRuns', action: 'List dataset runs', description: 'Read all runs for a dataset (Public API).' },
+        { name: 'Delete', value: 'deleteDatasetRun', action: 'Delete dataset run', description: 'Delete a dataset run by name (Public API).' },
+      ],
+      description: 'Choose the dataset run operation.',
+    },
+    {
       displayName: 'Operation', name: 'operation', type: 'options', default: 'health', noDataExpression: true,
       displayOptions: { show: { resource: ['system'] } },
       options: [
@@ -608,7 +711,7 @@ const v2Description: NodeDescription = {
       type: 'boolean',
       default: false,
       description: 'Reveal optional fields for the selected operation.',
-      displayOptions: { show: { resource: ['trace', 'span', 'generation', 'score', 'prompt', 'session', 'observation', 'queue', 'system'] } },
+      displayOptions: { show: { resource: ['trace', 'span', 'generation', 'score', 'prompt', 'session', 'observation', 'queue', 'dataset', 'datasetItem', 'datasetRun', 'system'] } },
     },
 
     // ---- Fields (same params as v1, displayOptions keyed by operation only) ----
@@ -668,13 +771,34 @@ const v2Description: NodeDescription = {
       description: 'Log severity for the SDK log event.', displayOptions: v2Basic('sdkLogCreate'),
     },
     { displayName: 'Queue ID', name: 'queueId', type: 'string', default: '', description: 'Annotation queue id to fetch.', displayOptions: v2Basic('getAnnotationQueue') },
+
+    // ---- Dataset fields ----
+    { displayName: 'Dataset Name', name: 'datasetName', type: 'string', default: '', required: true, placeholder: 'qa-eval-set', description: 'Name of the dataset.', displayOptions: v2Basic('getDataset', 'createDataset', 'createDatasetItem', 'listDatasetRuns', 'getDatasetRun', 'deleteDatasetRun') },
+    { displayName: 'Dataset Description', name: 'datasetDescription', type: 'string', default: '', description: 'Optional description stored on the dataset.', displayOptions: v2Adv('createDataset') },
+    { displayName: 'Dataset Item ID', name: 'datasetItemId', type: 'string', default: '', required: true, description: 'Dataset item id.', displayOptions: v2Basic('getDatasetItem', 'deleteDatasetItem', 'createDatasetRunItem') },
+    { displayName: 'Dataset Item ID', name: 'datasetItemId', type: 'string', default: '', placeholder: 'Optional item id', description: 'Optional dataset item id. Provide an existing id to update (upsert) that item.', displayOptions: v2Adv('createDatasetItem') },
+    { displayName: 'Run Name', name: 'runName', type: 'string', default: '', required: true, placeholder: 'run-2026-06-04', description: 'Name of the dataset run.', displayOptions: v2Basic('getDatasetRun', 'deleteDatasetRun', 'createDatasetRunItem') },
+    { displayName: 'Input JSON', name: 'inputJson', type: 'string', default: '', placeholder: '{"question":"2+2?"}', description: 'JSON input payload stored on the dataset item.', displayOptions: v2Basic('createDatasetItem') },
+    { displayName: 'Expected Output JSON', name: 'expectedOutputJson', type: 'string', default: '', placeholder: '{"answer":"4"}', description: 'JSON expected output stored on the dataset item.', displayOptions: v2Basic('createDatasetItem') },
+    { displayName: 'Metadata JSON', name: 'metadataJson', type: 'string', default: '', placeholder: '{"source":"n8n"}', description: 'Additional JSON metadata stored with the dataset, item, or run item.', displayOptions: v2Adv('createDataset', 'createDatasetItem', 'createDatasetRunItem') },
+    { displayName: 'Source Trace ID', name: 'sourceTraceId', type: 'string', default: '', description: 'Optional trace id this dataset item was derived from.', displayOptions: v2Adv('createDatasetItem') },
+    { displayName: 'Source Observation ID', name: 'sourceObservationId', type: 'string', default: '', description: 'Optional observation id this dataset item was derived from.', displayOptions: v2Adv('createDatasetItem') },
+    {
+      displayName: 'Dataset Item Status', name: 'datasetItemStatus', type: 'options', default: 'ACTIVE',
+      options: [{ name: 'Active', value: 'ACTIVE' }, { name: 'Archived', value: 'ARCHIVED' }],
+      description: 'Status of the dataset item.', displayOptions: v2Adv('createDatasetItem'),
+    },
+    { displayName: 'Trace ID', name: 'traceId', type: 'string', default: '', placeholder: '1234567890abcdef1234567890abcdef', description: 'Trace id this run item links to. Recommended for dataset run items.', displayOptions: v2Basic('createDatasetRunItem') },
+    { displayName: 'Observation ID', name: 'observationId', type: 'string', default: '', description: 'Optional observation id this run item links to instead of a trace.', displayOptions: v2Adv('createDatasetRunItem') },
+    { displayName: 'Run Description', name: 'runDescription', type: 'string', default: '', description: 'Optional description applied to the dataset run.', displayOptions: v2Adv('createDatasetRunItem') },
+
     { displayName: 'Path', name: 'path', type: 'string', default: '', placeholder: '/v2/prompts', description: 'Relative Langfuse Public API path for a custom request.', displayOptions: v2Basic('customRequest') },
     {
       displayName: 'Method', name: 'method', type: 'options', default: 'GET',
       options: [{ name: 'GET', value: 'GET' }, { name: 'POST', value: 'POST' }, { name: 'PUT', value: 'PUT' }, { name: 'PATCH', value: 'PATCH' }, { name: 'DELETE', value: 'DELETE' }],
       description: 'HTTP method for the custom request.', displayOptions: v2Basic('customRequest'),
     },
-    { displayName: 'Query JSON', name: 'queryJson', type: 'string', default: '', placeholder: '{"page":1,"limit":20}', description: 'JSON object converted into query string parameters.', displayOptions: v2Adv('listPrompts', 'listTraces', 'listScores', 'listObservations', 'listSessions', 'listAnnotationQueues', 'customRequest') },
+    { displayName: 'Query JSON', name: 'queryJson', type: 'string', default: '', placeholder: '{"page":1,"limit":20}', description: 'JSON object converted into query string parameters.', displayOptions: v2Adv('listPrompts', 'listTraces', 'listScores', 'listObservations', 'listSessions', 'listAnnotationQueues', 'listDatasets', 'listDatasetItems', 'listDatasetRuns', 'customRequest') },
     { displayName: 'Body JSON', name: 'bodyJson', type: 'string', default: '', placeholder: '{"name":"prompt-name"}', description: 'JSON request body for Custom Request. Ignored for GET and HEAD requests.', displayOptions: v2Adv('customRequest') },
     { displayName: 'Batch JSON', name: 'batchJson', type: 'string', default: '', placeholder: '{"batch":[{"id":"evt-1","type":"event-create"}]}', description: 'Raw Langfuse ingestion batch sent without mapping fields.', displayOptions: v2Basic('batchRaw') },
     { displayName: 'Fail On Batch Errors', name: 'failOnBatchErrors', type: 'boolean', default: false, description: 'Fail the item when Langfuse returns partial ingestion errors.', displayOptions: v2Adv('traceCreate', 'spanCreate', 'spanUpdate', 'generationCreate', 'generationUpdate', 'finalizeSpan', 'eventCreate', 'scoreCreate', 'sdkLogCreate', 'batchRaw') },

@@ -56,6 +56,7 @@ export interface NodeDescription {
 
 export interface NodeInputItem {
   json: Record<string, unknown>;
+  pairedItem?: { item: number };
 }
 
 export interface LangfuseExecuteContext {
