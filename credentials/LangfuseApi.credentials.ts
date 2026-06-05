@@ -63,7 +63,10 @@ const description: CredentialDescription = {
 export class LangfuseApi {
   name = description.name;
   displayName = description.displayName;
+  icon = description.icon;
   documentationUrl = description.documentationUrl;
+  authenticate = description.authenticate;
+  test = description.test;
   properties = description.properties;
 }
 
