@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { description as credentialDescription } from '../credentials/LangfuseApi.credentials.js';
+import { LangfuseApi, description as credentialDescription } from '../credentials/LangfuseApi.credentials.js';
 import { description as nodeDescription } from '../nodes/Langfuse/Langfuse.node.js';
 import { description as triggerDescription } from '../nodes/LangfuseTrigger/LangfuseTrigger.node.js';
 
@@ -34,4 +34,9 @@ test('Langfuse credential exposes a custom svg icon and credential test request'
   assert.equal(credentialDescription.authenticate?.type, 'generic');
   assert.equal(credentialDescription.authenticate?.properties.auth?.username, '={{$credentials.publicKey}}');
   assert.equal(credentialDescription.test?.request.url, '/api/public/v2/prompts?limit=1');
+
+  const credentialType = new LangfuseApi();
+  assert.equal(credentialType.icon, credentialDescription.icon);
+  assert.equal(credentialType.authenticate, credentialDescription.authenticate);
+  assert.equal(credentialType.test, credentialDescription.test);
 });

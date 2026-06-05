@@ -36,7 +36,7 @@
   "scripts": {
     "compile": "node ./scripts/clean-dist.mjs && tsc -p . && node ./scripts/copy-assets.mjs",
     "build": "npm run compile",
-    "test": "tsx --test tests/**/*.test.ts",
+    "test": "tsx --test tests/*.test.ts",
     "lint": "tsc -p . --noEmit && eslint \"nodes/**/*.ts\" \"credentials/**/*.ts\"",
     "lint:fix": "eslint \"nodes/**/*.ts\" \"credentials/**/*.ts\" --fix",
     "dev": "npm run compile",
