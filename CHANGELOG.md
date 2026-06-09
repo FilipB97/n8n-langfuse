@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.1] - 2026-06-09
+
+### Fixed
+
+- **`LangfuseAi` node — complete Langfuse tracing.**
+  - The prompt version number is now extracted from the Langfuse prompt response and logged to the generation (`promptVersion`), so Langfuse links each generation to the exact prompt version used.
+  - `modelParameters` (temperature, `max_tokens`) are now logged to the generation for full reproducibility.
+- **`LangfuseAi` node — multi-turn conversations.** Added `Previous Messages (JSON)` field (under Show Advanced Fields). Pass the `messages` output from a previous Langfuse AI node directly into this field to continue a multi-turn chat. The node now outputs a `messages` array containing the full conversation including the assistant reply.
+
 ## [1.7.0] - 2026-06-09
 
 ### Added
@@ -192,6 +201,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Basic Auth.
 
 [Unreleased]: https://github.com/FilipB97/n8n-langfuse/commits/main
+[1.7.1]: https://www.npmjs.com/package/n8n-nodes-langfuse-studio/v/1.7.1
 [1.7.0]: https://www.npmjs.com/package/n8n-nodes-langfuse-studio/v/1.7.0
 [1.6.1]: https://www.npmjs.com/package/n8n-nodes-langfuse-studio/v/1.6.1
 [1.6.0]: https://www.npmjs.com/package/n8n-nodes-langfuse-studio/v/1.6.0
