@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-langfuse-studio",
-  "version": "1.6.1",
+  "version": "1.7.0",
   "description": "n8n community node for Langfuse ingestion and Public API access.",
   "license": "MIT",
   "author": {
@@ -27,6 +27,7 @@
     "dist/index.d.ts.map",
     "dist/src",
     "dist/nodes/Langfuse",
+    "dist/nodes/LangfuseAi",
     "dist/nodes/LangfuseTrigger",
     "dist/credentials",
     "README.md",
@@ -49,6 +50,7 @@
     ],
     "nodes": [
       "dist/nodes/Langfuse/Langfuse.node.js",
+      "dist/nodes/LangfuseAi/LangfuseAi.node.js",
       "dist/nodes/LangfuseTrigger/LangfuseTrigger.node.js"
     ]
   },

@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-06-09
+
+### Added
+
+- **`Langfuse AI` node.** An all-in-one node that fetches a Langfuse prompt, calls an
+  OpenAI model, and logs the trace and generation to Langfuse automatically.
+  - Uses both `Langfuse API` and `OpenAI API` credentials.
+  - Supported models: `gpt-4o`, `gpt-4o-mini`, `gpt-4 Turbo`, `gpt-3.5-turbo`.
+  - **Prompt from Langfuse**: set **Prompt Name** to fetch a `text` or `chat` prompt and
+    substitute `{{variable}}` placeholders via **Prompt Variables (JSON)**. When blank,
+    the optional **System Message** field is used instead.
+  - **Advanced fields** (toggle): Prompt Label, Prompt Version, Temperature, Max Tokens,
+    Trace Name, Session ID, User ID, Tags, Environment.
+  - Langfuse ingestion (trace + generation) is fire-and-forget — a Langfuse failure
+    never blocks the OpenAI response.
+  - Returns `content`, `traceId`, `generationId`, `model`, and `usage`
+    (`promptTokens`, `completionTokens`, `totalTokens`).
+
 ## [1.6.1] - 2026-06-04
 
 ### Changed
@@ -174,6 +192,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Basic Auth.
 
 [Unreleased]: https://github.com/FilipB97/n8n-langfuse/commits/main
+[1.7.0]: https://www.npmjs.com/package/n8n-nodes-langfuse-studio/v/1.7.0
 [1.6.1]: https://www.npmjs.com/package/n8n-nodes-langfuse-studio/v/1.6.1
 [1.6.0]: https://www.npmjs.com/package/n8n-nodes-langfuse-studio/v/1.6.0
 [1.5.1]: https://www.npmjs.com/package/n8n-nodes-langfuse-studio/v/1.5.1
