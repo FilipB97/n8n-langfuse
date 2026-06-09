@@ -73,6 +73,16 @@ const description: NodeDescription = {
       description: 'Whether to show advanced configuration options',
     },
     {
+      displayName: 'Previous Messages (JSON)',
+      name: 'previousMessagesJson',
+      type: 'string',
+      default: '',
+      typeOptions: { rows: 3 },
+      description: 'JSON array of previous conversation messages to continue a multi-turn chat. Each message must have a "role" ("user" or "assistant") and "content" field. Pass the "messages" output from a previous Langfuse AI node to chain turns automatically.',
+      placeholder: '[{"role":"user","content":"Hi"},{"role":"assistant","content":"Hello!"}]',
+      displayOptions: { show: { showAdvancedFields: [true] } },
+    },
+    {
       displayName: 'Prompt Label',
       name: 'promptLabel',
       type: 'string',
@@ -194,6 +204,7 @@ export class LangfuseAi {
         const systemMessage = asString(getOptionalNodeParameter(this, 'systemMessage', itemIndex));
         const showAdvanced = this.getNodeParameter('showAdvancedFields', itemIndex) as boolean;
 
+        let previousMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> | undefined;
         let promptLabel: string | undefined;
         let promptVersion: string | undefined;
         let promptVariables: Record<string, string> | undefined;
@@ -206,6 +217,19 @@ export class LangfuseAi {
         let environment: string | undefined;
 
         if (showAdvanced) {
+          const prevMsgRaw = getOptionalNodeParameter(this, 'previousMessagesJson', itemIndex);
+          if (prevMsgRaw) {
+            const parsed = parseJsonMaybe(prevMsgRaw);
+            if (Array.isArray(parsed)) {
+              previousMessages = (parsed as unknown[]).filter(
+                (m): m is { role: 'system' | 'user' | 'assistant'; content: string } =>
+                  typeof m === 'object' && m !== null &&
+                  typeof (m as Record<string, unknown>).role === 'string' &&
+                  typeof (m as Record<string, unknown>).content === 'string',
+              );
+            }
+          }
+
           promptLabel = asString(getOptionalNodeParameter(this, 'promptLabel', itemIndex));
           promptVersion = asString(getOptionalNodeParameter(this, 'promptVersion', itemIndex));
 
@@ -249,6 +273,7 @@ export class LangfuseAi {
           model,
           userMessage,
           ...(promptName ? { promptName } : systemMessage ? { systemMessage } : {}),
+          ...(previousMessages?.length ? { previousMessages } : {}),
           ...(promptName && promptLabel ? { promptLabel } : {}),
           ...(promptName && promptVersion ? { promptVersion } : {}),
           ...(promptVariables ? { promptVariables } : {}),
@@ -269,6 +294,7 @@ export class LangfuseAi {
             traceId: result.traceId,
             generationId: result.generationId,
             model: result.model,
+            messages: result.messages,
             usage: result.usage,
           },
           pairedItem: { item: itemIndex },

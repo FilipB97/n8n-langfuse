@@ -25,6 +25,7 @@ export interface LangfuseAiInput {
   model: string;
   userMessage: string;
   systemMessage?: string;
+  previousMessages?: OpenAiMessage[];
   promptName?: string;
   promptLabel?: string;
   promptVersion?: string | number;
@@ -43,6 +44,7 @@ export interface LangfuseAiResult {
   traceId: string;
   generationId: string;
   model: string;
+  messages: OpenAiMessage[];
   usage: {
     promptTokens: number;
     completionTokens: number;
@@ -156,6 +158,9 @@ export async function runLangfuseAi(
 ): Promise<LangfuseAiResult> {
   const messages: OpenAiMessage[] = [];
 
+  // Resolved from Langfuse prompt response (version number returned by the API).
+  let resolvedPromptVersion: number | string | undefined;
+
   if (input.promptName) {
     const promptResp = await withRetry(() =>
       fetchLangfusePrompt({
@@ -170,8 +175,16 @@ export async function runLangfuseAi(
       }),
     );
     messages.push(...extractMessagesFromPrompt(promptResp.raw, input.promptVariables ?? {}));
+    if (typeof promptResp.raw === 'object' && promptResp.raw !== null) {
+      const raw = promptResp.raw as Record<string, unknown>;
+      if (typeof raw.version === 'number') resolvedPromptVersion = raw.version;
+    }
   } else if (input.systemMessage) {
     messages.push({ role: 'system', content: input.systemMessage });
+  }
+
+  if (input.previousMessages?.length) {
+    messages.push(...input.previousMessages);
   }
 
   messages.push({ role: 'user', content: input.userMessage });
@@ -197,12 +210,18 @@ export async function runLangfuseAi(
   const usedModel = openAiResponse.model ?? input.model;
   const rawUsage = openAiResponse.usage;
 
+  const outputMessages: OpenAiMessage[] = [...messages, { role: 'assistant', content }];
+
   const usageDetails: Record<string, number> = {};
   if (rawUsage) {
     if (rawUsage.prompt_tokens) usageDetails.input = rawUsage.prompt_tokens;
     if (rawUsage.completion_tokens) usageDetails.output = rawUsage.completion_tokens;
     if (rawUsage.total_tokens) usageDetails.total = rawUsage.total_tokens;
   }
+
+  const modelParameters: Record<string, unknown> = {};
+  if (input.temperature !== undefined) modelParameters.temperature = input.temperature;
+  if (input.maxTokens !== undefined) modelParameters.max_tokens = input.maxTokens;
 
   const traceEvent = createTraceEvent({
     traceId,
@@ -225,6 +244,8 @@ export async function runLangfuseAi(
     startTime,
     endTime,
     ...(input.promptName ? { promptName: input.promptName } : {}),
+    ...(resolvedPromptVersion !== undefined ? { promptVersion: resolvedPromptVersion } : {}),
+    ...(Object.keys(modelParameters).length ? { modelParameters } : {}),
     ...(Object.keys(usageDetails).length ? { usageDetails } : {}),
     ...(input.environment ? { environment: input.environment } : {}),
   });
@@ -243,6 +264,7 @@ export async function runLangfuseAi(
     traceId,
     generationId,
     model: usedModel,
+    messages: outputMessages,
     usage: {
       promptTokens: rawUsage?.prompt_tokens ?? 0,
       completionTokens: rawUsage?.completion_tokens ?? 0,

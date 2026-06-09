@@ -204,12 +204,11 @@ const LANGFUSE_CREDS: LangfuseCredentials = {
 
 const OPENAI_CREDS: OpenAiCredentials = { apiKey: 'sk-openai-test' };
 
-test('runLangfuseAi — returns content, traceId, generationId, model, usage', async () => {
+test('runLangfuseAi — returns content, traceId, generationId, model, messages, usage', async () => {
   const { restore } = withFetch((call) => {
     if (call.url.includes('openai')) {
       return { status: 200, body: FAKE_OPENAI_RESPONSE };
     }
-    // Langfuse ingestion
     return { status: 200, body: { successes: [], errors: [] } };
   });
   try {
@@ -225,6 +224,10 @@ test('runLangfuseAi — returns content, traceId, generationId, model, usage', a
     assert.equal(result.usage.promptTokens, 10);
     assert.equal(result.usage.completionTokens, 5);
     assert.equal(result.usage.totalTokens, 15);
+    // output messages = sent messages + assistant reply
+    const last = result.messages[result.messages.length - 1];
+    assert.equal(last?.role, 'assistant');
+    assert.equal(last?.content, 'Hello!');
   } finally {
     restore();
   }
@@ -270,6 +273,107 @@ test('runLangfuseAi — fetches Langfuse prompt when promptName given', async ()
     const openAiCall = calls.find((c) => c.url.includes('openai'));
     const messages = (openAiCall?.body as Record<string, unknown>)?.messages as unknown[];
     assert.equal((messages[0] as Record<string, unknown>).content, 'You are a chef.');
+  } finally {
+    restore();
+  }
+});
+
+test('runLangfuseAi — previousMessages are inserted between system and user message', async () => {
+  const { calls, restore } = withFetch((call) => {
+    if (call.url.includes('openai')) return { status: 200, body: FAKE_OPENAI_RESPONSE };
+    return { status: 200, body: { successes: [], errors: [] } };
+  });
+  try {
+    await runLangfuseAi(
+      {
+        model: 'gpt-4o',
+        systemMessage: 'Be concise.',
+        previousMessages: [
+          { role: 'user', content: 'What is 2+2?' },
+          { role: 'assistant', content: '4' },
+        ],
+        userMessage: 'Are you sure?',
+      },
+      LANGFUSE_CREDS,
+      OPENAI_CREDS,
+    );
+    const openAiCall = calls.find((c) => c.url.includes('openai'));
+    const messages = (openAiCall?.body as Record<string, unknown>)?.messages as Array<{ role: string; content: string }>;
+    assert.equal(messages[0]?.role, 'system');
+    assert.equal(messages[1]?.role, 'user');
+    assert.equal(messages[1]?.content, 'What is 2+2?');
+    assert.equal(messages[2]?.role, 'assistant');
+    assert.equal(messages[3]?.role, 'user');
+    assert.equal(messages[3]?.content, 'Are you sure?');
+  } finally {
+    restore();
+  }
+});
+
+test('runLangfuseAi — output messages array includes assistant reply for chaining', async () => {
+  const { restore } = withFetch((call) => {
+    if (call.url.includes('openai')) return { status: 200, body: FAKE_OPENAI_RESPONSE };
+    return { status: 200, body: { successes: [], errors: [] } };
+  });
+  try {
+    const result = await runLangfuseAi(
+      { model: 'gpt-4o', systemMessage: 'Be helpful.', userMessage: 'Hi' },
+      LANGFUSE_CREDS,
+      OPENAI_CREDS,
+    );
+    assert.equal(result.messages.length, 3); // system + user + assistant
+    assert.equal(result.messages[2]?.role, 'assistant');
+    assert.equal(result.messages[2]?.content, 'Hello!');
+  } finally {
+    restore();
+  }
+});
+
+test('runLangfuseAi — extracts promptVersion from Langfuse prompt response', async () => {
+  const { calls, restore } = withFetch((call) => {
+    if (call.url.includes('openai')) return { status: 200, body: FAKE_OPENAI_RESPONSE };
+    if (call.url.includes('prompts')) {
+      return { status: 200, body: { type: 'text', prompt: 'You are helpful.', name: 'my-prompt', version: 7 } };
+    }
+    return { status: 200, body: { successes: [], errors: [] } };
+  });
+  try {
+    await runLangfuseAi(
+      { model: 'gpt-4o', userMessage: 'Hi', promptName: 'my-prompt' },
+      LANGFUSE_CREDS,
+      OPENAI_CREDS,
+    );
+    await new Promise<void>((r) => setTimeout(r, 10)); // flush fire-and-forget
+    const ingestionCall = calls.find((c) => c.url.includes('ingestion'));
+    const batch = (ingestionCall?.body as Record<string, unknown>)?.batch as Array<Record<string, unknown>>;
+    const genEvent = batch?.find((e) => e.type === 'generation-create');
+    const genBody = genEvent?.body as Record<string, unknown>;
+    assert.equal(genBody?.promptName, 'my-prompt');
+    assert.equal(genBody?.promptVersion, 7);
+  } finally {
+    restore();
+  }
+});
+
+test('runLangfuseAi — logs modelParameters when temperature and maxTokens set', async () => {
+  const { calls, restore } = withFetch((call) => {
+    if (call.url.includes('openai')) return { status: 200, body: FAKE_OPENAI_RESPONSE };
+    return { status: 200, body: { successes: [], errors: [] } };
+  });
+  try {
+    await runLangfuseAi(
+      { model: 'gpt-4o', userMessage: 'Hi', temperature: 0.3, maxTokens: 512 },
+      LANGFUSE_CREDS,
+      OPENAI_CREDS,
+    );
+    await new Promise<void>((r) => setTimeout(r, 10)); // flush fire-and-forget
+    const ingestionCall = calls.find((c) => c.url.includes('ingestion'));
+    const batch = (ingestionCall?.body as Record<string, unknown>)?.batch as Array<Record<string, unknown>>;
+    const genEvent = batch?.find((e) => e.type === 'generation-create');
+    const genBody = genEvent?.body as Record<string, unknown>;
+    const modelParams = genBody?.modelParameters as Record<string, unknown>;
+    assert.equal(modelParams?.temperature, 0.3);
+    assert.equal(modelParams?.max_tokens, 512);
   } finally {
     restore();
   }
