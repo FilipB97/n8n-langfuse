@@ -34,7 +34,7 @@ jobs:
         run: ./node_modules/.bin/eslint "nodes/**/*.ts" "credentials/**/*.ts" --max-warnings 0
 
       - name: Run tests
-        run: ./node_modules/.bin/tsx --test tests/**/*.test.ts
+        run: npm test
 
       - name: Publish to npm (skip if already published)
         run: |
