@@ -308,6 +308,25 @@ test('runLangfuseAi — provider anthropic calls Messages API and normalizes con
   }
 });
 
+test('runLangfuseAi — baseUrl override targets an OpenAI-compatible endpoint', async () => {
+  const { calls, restore } = withFetch((call) => {
+    if (call.url.includes('openrouter')) return { status: 200, body: FAKE_OPENAI_RESPONSE };
+    return { status: 200, body: { successes: [], errors: [] } };
+  });
+  try {
+    await runLangfuseAi(
+      { model: 'gpt-4o', userMessage: 'Hi', baseUrl: 'https://openrouter.ai/api' },
+      LANGFUSE_CREDS,
+      OPENAI_CREDS,
+    );
+    const aiCall = calls.find((c) => c.url.includes('openrouter'));
+    assert.ok(aiCall, 'should call the overridden base URL');
+    assert.equal(aiCall?.url, 'https://openrouter.ai/api/v1/chat/completions');
+  } finally {
+    restore();
+  }
+});
+
 test('runLangfuseAi — reports logged:false and loggingError when ingestion fails', async () => {
   const { restore } = withFetch((call) => {
     if (call.url.includes('openai')) return { status: 200, body: FAKE_OPENAI_RESPONSE };

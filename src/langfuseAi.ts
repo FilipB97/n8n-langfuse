@@ -34,6 +34,12 @@ export interface OpenAiMessage {
 
 export interface LangfuseAiInput {
   provider?: LlmProvider;
+  /**
+   * Optional base URL override. For the OpenAI provider this enables any
+   * OpenAI-compatible endpoint (Gemini's OpenAI API, OpenRouter, Together,
+   * Ollama/LM Studio, gateways). Takes precedence over the credential's URL.
+   */
+  baseUrl?: string;
   model: string;
   userMessage: string;
   systemMessage?: string;
@@ -287,12 +293,13 @@ async function callProvider(
 ): Promise<NormalizedLlmResponse> {
   if (provider === 'anthropic') {
     const creds = providerCreds as AnthropicCredentials;
+    const anthropicBaseUrl = input.baseUrl ?? creds.baseUrl;
     const response = await withRetry(() =>
       callAnthropic({
         apiKey: creds.apiKey,
         model: input.model,
         messages,
-        ...(creds.baseUrl ? { baseUrl: creds.baseUrl } : {}),
+        ...(anthropicBaseUrl ? { baseUrl: anthropicBaseUrl } : {}),
         ...(input.temperature !== undefined ? { temperature: input.temperature } : {}),
         ...(input.maxTokens !== undefined ? { maxTokens: input.maxTokens } : {}),
         ...(timeoutMs !== undefined ? { timeoutMs } : {}),
@@ -303,13 +310,14 @@ async function callProvider(
   }
 
   const creds = providerCreds as OpenAiCredentials;
+  const openAiBaseUrl = input.baseUrl ?? creds.baseUrl;
   const response = await withRetry(() =>
     callOpenAi({
       apiKey: creds.apiKey,
       model: input.model,
       messages,
       ...(creds.organizationId ? { organizationId: creds.organizationId } : {}),
-      ...(creds.baseUrl ? { baseUrl: creds.baseUrl } : {}),
+      ...(openAiBaseUrl ? { baseUrl: openAiBaseUrl } : {}),
       ...(input.temperature !== undefined ? { temperature: input.temperature } : {}),
       ...(input.maxTokens !== undefined ? { maxTokens: input.maxTokens } : {}),
       ...(timeoutMs !== undefined ? { timeoutMs } : {}),

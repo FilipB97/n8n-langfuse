@@ -178,6 +178,15 @@ const description: NodeDescription = {
       description: 'Environment label to attach to the trace and generation',
       displayOptions: { show: { showAdvancedFields: [true] } },
     },
+    {
+      displayName: 'Base URL',
+      name: 'baseUrl',
+      type: 'string',
+      default: '',
+      placeholder: 'https://openrouter.ai/api',
+      description: 'Override the provider base URL. For OpenAI this enables any OpenAI-compatible endpoint (Gemini OpenAI API, OpenRouter, Together, Ollama). Leave blank to use the credential default.',
+      displayOptions: { show: { showAdvancedFields: [true] } },
+    },
   ],
 };
 
@@ -236,6 +245,7 @@ export class LangfuseAi {
         let userId: string | undefined;
         let tags: string[] | undefined;
         let environment: string | undefined;
+        let baseUrl: string | undefined;
 
         if (showAdvanced) {
           const prevMsgRaw = getOptionalNodeParameter(this, 'previousMessagesJson', itemIndex);
@@ -280,6 +290,7 @@ export class LangfuseAi {
           sessionId = asString(getOptionalNodeParameter(this, 'sessionId', itemIndex));
           userId = asString(getOptionalNodeParameter(this, 'userId', itemIndex));
           environment = asString(getOptionalNodeParameter(this, 'environment', itemIndex));
+          baseUrl = asString(getOptionalNodeParameter(this, 'baseUrl', itemIndex));
 
           const tagsRaw = getOptionalNodeParameter(this, 'tagsJson', itemIndex);
           if (tagsRaw) {
@@ -292,6 +303,7 @@ export class LangfuseAi {
 
         const input: LangfuseAiInput = {
           provider,
+          ...(baseUrl ? { baseUrl } : {}),
           model,
           userMessage,
           ...(promptName ? { promptName } : systemMessage ? { systemMessage } : {}),
