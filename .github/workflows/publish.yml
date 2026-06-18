@@ -31,7 +31,7 @@ jobs:
         run: node ./scripts/clean-dist.mjs && ./node_modules/.bin/tsc -p . && node ./scripts/copy-assets.mjs
 
       - name: Lint
-        run: ./node_modules/.bin/eslint "nodes/**/*.ts" "credentials/**/*.ts"
+        run: ./node_modules/.bin/eslint "nodes/**/*.ts" "credentials/**/*.ts" --max-warnings 0
 
       - name: Run tests
         run: ./node_modules/.bin/tsx --test tests/**/*.test.ts
