@@ -1,8 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { NodeApiError } from 'n8n-workflow';
-
 import { Langfuse } from '../nodes/Langfuse/Langfuse.node.js';
 import type { LangfuseExecuteContext, NodeInputItem } from '../src/n8n-lite.js';
 
@@ -52,7 +50,6 @@ function makeContext(opts: {
   const items = opts.items ?? opts.paramsByIndex.map(() => ({ json: {} }));
   return {
     getInputData: () => items,
-    getNode: () => ({ name: 'Langfuse', type: 'langfuse', typeVersion: 2 }),
     getCredentials: async () => ({
       baseUrl: 'https://cloud.langfuse.com',
       publicKey: 'pk-test',
@@ -191,14 +188,14 @@ test('continueOnFail captures the error instead of throwing', async () => {
   }
 });
 
-test('without continueOnFail a failed request rejects with a NodeApiError', async () => {
+test('without continueOnFail a failed request rejects', async () => {
   const stub = withFetch(() => ({ status: 404, body: { message: 'not found' } }));
   try {
     const ctx = makeContext({
       paramsByIndex: [{ resource: 'trace', operation: 'getTrace', traceId: 'missing' }],
       continueOnFail: false,
     });
-    await assert.rejects(() => execute(ctx), (error: unknown) => error instanceof NodeApiError);
+    await assert.rejects(() => execute(ctx));
   } finally {
     stub.restore();
   }

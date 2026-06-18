@@ -28,7 +28,7 @@ Legend: ✅ met · ⚠️ decision needed · ❌ gap to close
 | Credential has a working `test` request | ✅ | `GET /api/public/v2/prompts?limit=1`, base-URL normalized |
 | SVG icons on every node + credential | ✅ | |
 | Programmatic node structure (`description` + `execute`/`poll`) | ✅ | |
-| Throws `NodeOperationError` / `NodeApiError` from `execute` | ✅ | node layer wraps failures; `node-execute-block-wrong-error-thrown` re-enabled |
+| Throws `NodeOperationError` / `NodeApiError` from `execute` | ⚠️ | deferred — see gap #1 (the `n8n-workflow` dep drags in a native build that breaks CI) |
 | Continue-on-fail honored | ✅ | per-item, surfaces status/body on API errors |
 
 ## CI / release hygiene
@@ -44,15 +44,25 @@ Legend: ✅ met · ⚠️ decision needed · ❌ gap to close
 
 ## Open decisions / gaps
 
-### ✅ 1. n8n error classes (closed)
+### ⚠️ 1. n8n error classes (deferred — native-build blocker)
 
-`n8n-workflow` is now a **devDependency** (not a runtime `dependency`, so the
-zero-deps property holds — n8n provides it as a peer at runtime). The node layer
-(`nodes/**`) imports `NodeOperationError` / `NodeApiError` and wraps every
-failure thrown from `execute`; the pure logic in `src/**` stays n8n-free and
-`src/n8n-lite.ts` continues to supply the structural types (with an added
-optional `getNode()`). The `node-execute-block-wrong-error-thrown` lint rule is
-re-enabled and passing.
+Verified nodes are expected to throw `NodeOperationError` / `NodeApiError` so the
+editor gets clickable item context and retry semantics. Those classes live in
+`n8n-workflow`.
+
+Attempted and reverted: adding `n8n-workflow` (even as a devDependency) pulls in
+`@n8n/expression-runtime` → **`isolated-vm`**, a native V8 sandbox. `isolated-vm`
+fails to compile on the GitHub Actions runner (`npm ci` errors out) and is heavy
+to install; the Socket scanner also flags the resulting tree. Importing
+`n8n-workflow` loads `isolated-vm` at module init, so it can't be made
+build-optional. The cost (broken CI, native dep, supply-chain noise) outweighs
+the benefit for this package, so the node intentionally throws plain `Error` and
+the `node-execute-block-wrong-error-thrown` lint rule stays disabled.
+
+**Revisit when** there's a way to get the error classes without the native dep —
+e.g. n8n publishing a types-only or errors-only entrypoint, or
+`@n8n/expression-runtime` making `isolated-vm` optional. Until then this is a
+known, documented deviation to raise with n8n during verification.
 
 ### ⚠️ 2. `LangfuseAi` scope and core-credential references
 
@@ -77,7 +87,8 @@ submitting: a screenshot or two.
 
 ## Suggested order
 
-1. ~~Add `n8n-workflow` devDependency + `NodeOperationError`/`NodeApiError`~~ — done.
+1. n8n error classes — blocked on the `isolated-vm` native build (see gap #1);
+   raise as a documented deviation with n8n rather than taking the native dep.
 2. Decide `LangfuseAi` scope / credentials (see ⚠️ 2).
 3. ~~README per-node usage~~ — done; add screenshots before submitting.
 4. Submit `Langfuse` (+ `LangfuseTrigger`) for verification.
