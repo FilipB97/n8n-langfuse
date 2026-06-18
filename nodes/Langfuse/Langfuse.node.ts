@@ -13,6 +13,7 @@ import {
 import {
   buildLangfusePublicApiUrl,
   requestLangfusePublicApi,
+  requestLangfusePublicApiAll,
   resolveLangfusePublicApiEndpoint,
   type LangfusePublicApiMethod,
   type LangfusePublicApiOperation,
@@ -327,6 +328,14 @@ const INGESTION_OPERATIONS = new Set<string>([
   'finalizeSpan', 'eventCreate', 'scoreCreate', 'sdkLogCreate', 'batchRaw',
 ]);
 
+// Public API operations that page through a `{ data, meta }` list — eligible for
+// the "Return All" auto-pagination toggle.
+const LIST_OPERATIONS = new Set<string>([
+  'listPrompts', 'listTraces', 'listScores', 'listObservations', 'listSessions',
+  'listAnnotationQueues', 'listAnnotationQueueItems', 'listScoreConfigs',
+  'listDatasets', 'listDatasetItems', 'listDatasetRuns',
+]);
+
 async function runExecute(this: LangfuseExecuteContext): Promise<Array<Array<NodeInputItem>>> {
   const items = this.getInputData();
   const output: Array<NodeInputItem> = [];
@@ -378,6 +387,34 @@ async function runExecute(this: LangfuseExecuteContext): Promise<Array<Array<Nod
 
       const params = buildPublicApiParameters(this, itemIndex, operation as LangfusePublicApiOperation);
       const endpoint = resolveLangfusePublicApiEndpoint(operation as LangfusePublicApiOperation, params);
+
+      // "Return All" auto-pagination for list operations.
+      if (LIST_OPERATIONS.has(operation) && Boolean(getOptionalNodeParameter(this, 'returnAll', itemIndex))) {
+        const all = await requestLangfusePublicApiAll({
+          baseUrl: credentials.baseUrl,
+          publicKey: credentials.publicKey,
+          secretKey: credentials.secretKey,
+          path: endpoint.path,
+          ...(endpoint.query !== undefined ? { query: endpoint.query } : {}),
+          ...(credentials.timeoutMs !== undefined ? { timeoutMs: credentials.timeoutMs } : {}),
+        });
+        output.push({
+          json: {
+            resource,
+            operation,
+            requestUrl: buildLangfusePublicApiUrl(credentials.baseUrl, endpoint.path, endpoint.query),
+            status: all.status,
+            ok: true,
+            returnAll: true,
+            pages: all.pages,
+            count: all.data.length,
+            data: all.data,
+          },
+          pairedItem: { item: itemIndex },
+        });
+        continue;
+      }
+
       const response = await withRetry(() =>
         requestLangfusePublicApi({
           baseUrl: credentials.baseUrl,
@@ -607,6 +644,7 @@ const v1Description: NodeDescription = {
       description: 'HTTP method for the custom request', displayOptions: showPublicApiBasic('customRequest'),
     },
     { displayName: 'Query JSON', name: 'queryJson', type: 'string', default: '', placeholder: '{"page":1,"limit":20}', description: 'JSON object converted into query string parameters', displayOptions: showPublicApi('listPrompts', 'listTraces', 'listScores', 'listObservations', 'listSessions', 'listAnnotationQueues', 'listAnnotationQueueItems', 'listScoreConfigs', 'customRequest') },
+    { displayName: 'Return All', name: 'returnAll', type: 'boolean', default: false, description: 'Whether to return all results or only up to a given limit', displayOptions: showPublicApiBasic('listPrompts', 'listTraces', 'listScores', 'listObservations', 'listSessions', 'listAnnotationQueues', 'listAnnotationQueueItems', 'listScoreConfigs') },
     { displayName: 'Body JSON', name: 'bodyJson', type: 'string', default: '', placeholder: '{"name":"prompt-name"}', description: 'JSON request body for Custom Request. Ignored for GET and HEAD requests.', displayOptions: showPublicApi('customRequest') },
     { displayName: 'Batch JSON', name: 'batchJson', type: 'string', default: '', placeholder: '{"batch":[{"ID":"evt-1","type":"event-create"}]}', description: 'Raw Langfuse ingestion batch sent without mapping fields', displayOptions: showIngestionBasic('batchRaw') },
     { displayName: 'Fail On Batch Errors', name: 'failOnBatchErrors', type: 'boolean', default: false, description: 'Whether to fail the item when Langfuse returns partial ingestion errors', displayOptions: showIngestion('traceCreate', 'spanCreate', 'spanUpdate', 'generationCreate', 'generationUpdate', 'finalizeSpan', 'eventCreate', 'scoreCreate', 'sdkLogCreate', 'batchRaw') },
@@ -894,6 +932,7 @@ const v2Description: NodeDescription = {
       description: 'HTTP method for the custom request', displayOptions: v2Basic('customRequest'),
     },
     { displayName: 'Query JSON', name: 'queryJson', type: 'string', default: '', placeholder: '{"page":1,"limit":20}', description: 'JSON object converted into query string parameters', displayOptions: v2Adv('listPrompts', 'listTraces', 'listScores', 'listObservations', 'listSessions', 'listAnnotationQueues', 'listAnnotationQueueItems', 'listScoreConfigs', 'listDatasets', 'listDatasetItems', 'listDatasetRuns', 'customRequest') },
+    { displayName: 'Return All', name: 'returnAll', type: 'boolean', default: false, description: 'Whether to return all results or only up to a given limit', displayOptions: v2Basic('listPrompts', 'listTraces', 'listScores', 'listObservations', 'listSessions', 'listAnnotationQueues', 'listAnnotationQueueItems', 'listScoreConfigs', 'listDatasets', 'listDatasetItems', 'listDatasetRuns') },
     { displayName: 'Body JSON', name: 'bodyJson', type: 'string', default: '', placeholder: '{"name":"prompt-name"}', description: 'JSON request body for Custom Request. Ignored for GET and HEAD requests.', displayOptions: v2Adv('customRequest') },
     { displayName: 'Batch JSON', name: 'batchJson', type: 'string', default: '', placeholder: '{"batch":[{"ID":"evt-1","type":"event-create"}]}', description: 'Raw Langfuse ingestion batch sent without mapping fields', displayOptions: v2Basic('batchRaw') },
     { displayName: 'Fail On Batch Errors', name: 'failOnBatchErrors', type: 'boolean', default: false, description: 'Whether to fail the item when Langfuse returns partial ingestion errors', displayOptions: v2Adv('traceCreate', 'spanCreate', 'spanUpdate', 'generationCreate', 'generationUpdate', 'finalizeSpan', 'eventCreate', 'scoreCreate', 'sdkLogCreate', 'batchRaw') },

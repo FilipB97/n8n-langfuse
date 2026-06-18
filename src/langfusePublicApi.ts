@@ -1,4 +1,4 @@
-import { asString, buildBasicAuthHeader, LangfuseRequestError, normalizeBaseUrl, parseJsonMaybe } from './langfuse.js';
+import { asString, buildBasicAuthHeader, LangfuseRequestError, normalizeBaseUrl, parseJsonMaybe, withRetry } from './langfuse.js';
 
 export type LangfusePublicApiMethod = 'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -636,5 +636,99 @@ export async function requestLangfusePublicApi(options: LangfusePublicApiRequest
     if (timeout) {
       clearTimeout(timeout);
     }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Auto-pagination for list endpoints
+// ---------------------------------------------------------------------------
+
+export interface LangfusePublicApiListAllOptions {
+  baseUrl: string;
+  publicKey: string;
+  secretKey: string;
+  path: string;
+  query?: Record<string, string | number | boolean | undefined>;
+  timeoutMs?: number;
+  fetchImpl?: typeof fetch;
+  /** Records requested per page. Langfuse caps this server-side. */
+  pageSize?: number;
+  /** Hard safety cap on the number of pages walked. */
+  maxPages?: number;
+}
+
+export interface LangfusePublicApiListAllResult {
+  data: unknown[];
+  pages: number;
+  status: number;
+}
+
+/**
+ * Extract the records array and (when present) the total page count from a
+ * Langfuse list response. Langfuse paginates as `{ data: [...], meta: { page,
+ * limit, totalItems, totalPages } }`; we tolerate a bare array and a missing
+ * `meta` for forward/backward compatibility.
+ */
+export function extractListPage(raw: unknown): { items: unknown[]; totalPages: number | undefined } {
+  if (Array.isArray(raw)) {
+    return { items: raw, totalPages: undefined };
+  }
+
+  if (raw && typeof raw === 'object') {
+    const obj = raw as Record<string, unknown>;
+    const items = Array.isArray(obj.data) ? obj.data : [];
+    let totalPages: number | undefined;
+    const meta = obj.meta;
+    if (meta && typeof meta === 'object') {
+      const tp = (meta as Record<string, unknown>).totalPages;
+      if (typeof tp === 'number' && Number.isFinite(tp)) totalPages = tp;
+    }
+    return { items, totalPages };
+  }
+
+  return { items: [], totalPages: undefined };
+}
+
+/**
+ * Walk every page of a Langfuse list endpoint and concatenate the records.
+ * Stops at `meta.totalPages` when the API reports it, otherwise when a short
+ * page comes back, and always at `maxPages` as a safety net. Each page request
+ * is retried on transient (429/5xx) failures.
+ */
+export async function requestLangfusePublicApiAll(
+  options: LangfusePublicApiListAllOptions,
+): Promise<LangfusePublicApiListAllResult> {
+  const pageSize = options.pageSize ?? 100;
+  const maxPages = options.maxPages ?? 1000;
+  const all: unknown[] = [];
+  let page = 1;
+  let lastStatus = 200;
+
+  for (;;) {
+    const response = await withRetry(() =>
+      requestLangfusePublicApi({
+        baseUrl: options.baseUrl,
+        publicKey: options.publicKey,
+        secretKey: options.secretKey,
+        path: options.path,
+        method: 'GET',
+        query: { ...(options.query ?? {}), page, limit: pageSize },
+        ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
+        ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
+      }),
+    );
+    lastStatus = response.status;
+
+    const { items, totalPages } = extractListPage(response.raw);
+    all.push(...items);
+
+    const reachedEnd =
+      items.length === 0 ||
+      (totalPages !== undefined ? page >= totalPages : items.length < pageSize) ||
+      page >= maxPages;
+    if (reachedEnd) {
+      return { data: all, pages: page, status: lastStatus };
+    }
+    page += 1;
   }
 }
