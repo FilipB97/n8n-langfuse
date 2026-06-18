@@ -14,6 +14,7 @@ export interface NodePropertyDisplayOptions {
     operation?: string[];
     showAdvancedFields?: boolean[];
     promptType?: string[];
+    provider?: string[];
   };
 }
 
@@ -52,6 +53,7 @@ export interface NodeDescription {
   credentials: Array<{
     name: string;
     required: boolean;
+    displayOptions?: NodePropertyDisplayOptions;
   }>;
   properties: NodeProperty[];
 }

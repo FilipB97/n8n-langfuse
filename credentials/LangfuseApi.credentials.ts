@@ -16,7 +16,10 @@ const description: CredentialDescription = {
   },
   test: {
     request: {
-      baseURL: '={{$credentials?.baseUrl}}',
+      // Mirror the runtime URL builders: strip a trailing slash and an existing
+      // /api/public suffix so the test works whether or not the base URL already
+      // includes it.
+      baseURL: "={{$credentials.baseUrl.replace(/\\/+$/, '').replace(/\\/api\\/public$/, '')}}",
       url: '/api/public/v2/prompts?limit=1',
     },
   },

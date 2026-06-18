@@ -1,6 +1,7 @@
 import {
   asString,
   buildIngestionUrl,
+  LangfuseRequestError,
   sendLangfuseIngestion,
   withRetry,
 } from '../../src/langfuse.js';
@@ -380,6 +381,11 @@ async function runExecute(this: LangfuseExecuteContext): Promise<Array<Array<Nod
             operation,
             ok: false,
             error: asErrorMessage(error),
+            // Preserve the HTTP status and response body for failed API calls so
+            // downstream nodes can branch on them instead of parsing the message.
+            ...(error instanceof LangfuseRequestError
+              ? { status: error.status, errorBody: error.body }
+              : {}),
           },
           pairedItem: { item: itemIndex },
         });

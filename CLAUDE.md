@@ -4,12 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-`n8n-nodes-langfuse-studio` is a single n8n community node that talks to Langfuse two ways, selected by the node's `Resource` dropdown:
+`n8n-nodes-langfuse-studio` ships three n8n nodes plus one credential:
 
-- **Ingestion** (`resource: 'ingestion'`) — writes the legacy ingestion batch API: trace/span/generation/event/score/sdk-log creates and updates, plus a raw batch escape hatch.
-- **Public API** (`resource: 'publicApi'`) — reads health, prompts, traces, scores, observations, annotation queues, plus a custom-request escape hatch.
+- **`Langfuse`** (`nodes/Langfuse`) — the main action node, talking to Langfuse two ways via its `Resource` dropdown:
+  - **Ingestion** (`resource: 'ingestion'`) — writes the legacy ingestion batch API: trace/span/generation/event/score/sdk-log creates and updates, plus a raw batch escape hatch.
+  - **Public API** (`resource: 'publicApi'`) — reads health, prompts, traces, scores, observations, sessions, datasets, annotation queues, plus a custom-request escape hatch.
+  - It is versioned: V1 keeps the legacy `ingestion | publicApi` resource layout, V2 exposes an entity-based resource layout (trace/span/generation/score/…). Both share one `execute`.
+- **`LangfuseAi`** (`nodes/LangfuseAi`) — convenience node that fetches a Langfuse prompt (optional), calls an LLM, and logs the trace + generation to Langfuse automatically. Supports an OpenAI or Anthropic `Provider` (selecting which credential is required) and a free-text `Model` field. Logging is awaited but non-fatal: the AI call still succeeds if ingestion fails, and the outcome is reported on the output (`logged` / `loggingError`). Failed model calls are also logged to Langfuse as an `ERROR` generation.
+- **`LangfuseTrigger`** (`nodes/LangfuseTrigger`) — a polling trigger that emits new traces/scores/observations.
 
-Both authenticate with HTTP Basic Auth where the username is the Langfuse public key and the password is the secret key.
+The `Langfuse`/`LangfuseTrigger` nodes authenticate with the `langfuseApi` credential (HTTP Basic Auth: username = Langfuse public key, password = secret key). `LangfuseAi` additionally uses n8n's built-in `openAiApi` or `anthropicApi` credential depending on the selected provider.
 
 ## Commands
 
