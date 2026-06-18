@@ -5,6 +5,7 @@ import {
   type LlmProvider,
   type LangfuseAiInput,
 } from '../../src/langfuseAi.js';
+import { NodeOperationError, type INode } from 'n8n-workflow';
 import type {
   LangfuseExecuteContext,
   NodeDescription,
@@ -330,8 +331,14 @@ export class LangfuseAi {
             json: { error: error instanceof Error ? error.message : String(error) },
             pairedItem: { item: itemIndex },
           });
-        } else {
+        } else if (error instanceof NodeOperationError) {
           throw error;
+        } else {
+          throw new NodeOperationError(
+            (this.getNode?.() ?? { name: 'Langfuse AI', type: 'langfuseAi', typeVersion: 1 }) as INode,
+            error as Error,
+            { itemIndex },
+          );
         }
       }
     }

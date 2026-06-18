@@ -19,12 +19,6 @@ module.exports = {
       files: ['nodes/**/*.ts'],
       plugins: ['eslint-plugin-n8n-nodes-base'],
       extends: ['plugin:n8n-nodes-base/nodes'],
-      rules: {
-        // This node runs on a framework-agnostic execution layer (src/n8n-lite.ts)
-        // and intentionally does not depend on `n8n-workflow`, so it throws plain
-        // Error instead of NodeOperationError/NodeApiError.
-        'n8n-nodes-base/node-execute-block-wrong-error-thrown': 'off',
-      },
     },
   ],
 };

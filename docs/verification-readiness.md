@@ -24,10 +24,11 @@ Legend: ✅ met · ⚠️ decision needed · ❌ gap to close
 
 | Requirement | Status | Notes |
 |---|---|---|
-| Passes `eslint-plugin-n8n-nodes-base` (`/nodes` + `/credentials`) | ✅ | 0 errors, 0 warnings; CI now fails on any warning (`--max-warnings 0`) |
+| Passes `eslint-plugin-n8n-nodes-base` (`/nodes` + `/credentials`) | ✅ | 0 errors, 0 warnings; CI now fails on any warning (`--max-warnings 0`); no rules disabled |
 | Credential has a working `test` request | ✅ | `GET /api/public/v2/prompts?limit=1`, base-URL normalized |
 | SVG icons on every node + credential | ✅ | |
 | Programmatic node structure (`description` + `execute`/`poll`) | ✅ | |
+| Throws `NodeOperationError` / `NodeApiError` from `execute` | ✅ | node layer wraps failures; `node-execute-block-wrong-error-thrown` re-enabled |
 | Continue-on-fail honored | ✅ | per-item, surfaces status/body on API errors |
 
 ## CI / release hygiene
@@ -43,23 +44,15 @@ Legend: ✅ met · ⚠️ decision needed · ❌ gap to close
 
 ## Open decisions / gaps
 
-### ⚠️ 1. `n8n-lite` vs real `n8n-workflow` types
+### ✅ 1. n8n error classes (closed)
 
-The package deliberately hand-declares the slice of n8n's interfaces it uses
-(`src/n8n-lite.ts`) instead of importing `n8n-workflow`, which keeps builds and
-tests dependency-free. Runtime works via structural typing.
-
-Consequence for verification: the node layer throws plain `Error` rather than
-`NodeOperationError` / `NodeApiError`, so the lint rule
-`node-execute-block-wrong-error-thrown` is currently **disabled**. Verified nodes
-are expected to use n8n's error classes for correct UI behavior (clickable item
-context, "pin", retry semantics).
-
-**Recommended path:** add `n8n-workflow` as a **devDependency** (not a runtime
-`dependency`, so the zero-deps property is preserved — n8n provides it at runtime
-as a peer), import `NodeOperationError`/`NodeApiError` only in the node layer
-(`nodes/**`), keep the pure logic in `src/**` untouched, then re-enable the lint
-rule. This is the single highest-value step toward verification.
+`n8n-workflow` is now a **devDependency** (not a runtime `dependency`, so the
+zero-deps property holds — n8n provides it as a peer at runtime). The node layer
+(`nodes/**`) imports `NodeOperationError` / `NodeApiError` and wraps every
+failure thrown from `execute`; the pure logic in `src/**` stays n8n-free and
+`src/n8n-lite.ts` continues to supply the structural types (with an added
+optional `getNode()`). The `node-execute-block-wrong-error-thrown` lint rule is
+re-enabled and passing.
 
 ### ⚠️ 2. `LangfuseAi` scope and core-credential references
 
@@ -83,8 +76,7 @@ or two.
 
 ## Suggested order
 
-1. Add `n8n-workflow` devDependency + `NodeOperationError`/`NodeApiError` in the
-   node layer; re-enable the disabled lint rule. *(closes the main gap)*
+1. ~~Add `n8n-workflow` devDependency + `NodeOperationError`/`NodeApiError`~~ — done.
 2. Decide `LangfuseAi` scope / credentials (see ⚠️ 2).
 3. README polish + screenshots.
 4. Submit `Langfuse` (+ `LangfuseTrigger`) for verification.

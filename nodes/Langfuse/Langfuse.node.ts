@@ -18,6 +18,7 @@ import {
   type LangfusePublicApiOperation,
   type LangfusePublicApiParameters,
 } from '../../src/langfusePublicApi.js';
+import { NodeApiError, NodeOperationError, type INode } from 'n8n-workflow';
 import type {
   LangfuseExecuteContext,
   NodeDescription,
@@ -48,6 +49,31 @@ function getOptionalNodeParameter(
 
 function asErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * Wrap an arbitrary failure in the n8n error class the editor expects: a
+ * `NodeApiError` for Langfuse HTTP failures (carries status + response body),
+ * a `NodeOperationError` for everything else. Already-wrapped errors pass
+ * through. `getNode()` is optional on the lite context (tests may omit it), so
+ * fall back to a minimal node descriptor.
+ */
+function toNodeError(context: LangfuseExecuteContext, error: unknown, itemIndex: number): Error {
+  if (error instanceof NodeApiError || error instanceof NodeOperationError) {
+    return error;
+  }
+
+  const node = (context.getNode?.() ?? { name: 'Langfuse', type: 'langfuse', typeVersion: 1 }) as INode;
+
+  if (error instanceof LangfuseRequestError) {
+    return new NodeApiError(
+      node,
+      { message: error.message, status: error.status, body: error.body } as never,
+      { itemIndex, httpCode: String(error.status), message: error.message },
+    );
+  }
+
+  return new NodeOperationError(node, error as Error, { itemIndex });
 }
 
 function buildIngestionParameters(context: LangfuseExecuteContext, itemIndex: number): LangfuseOperationParameters {
@@ -326,7 +352,11 @@ async function runExecute(this: LangfuseExecuteContext): Promise<Array<Array<Nod
         );
 
         if (response.errors.length > 0 && failOnBatchErrors) {
-          throw new Error(`Langfuse returned ${response.errors.length} batch error(s) for operation ${operation}`);
+          throw new NodeOperationError(
+            (this.getNode?.() ?? { name: 'Langfuse', type: 'langfuse', typeVersion: 1 }) as INode,
+            `Langfuse returned ${response.errors.length} batch error(s) for operation ${operation}`,
+            { itemIndex },
+          );
         }
 
         output.push({
@@ -392,7 +422,7 @@ async function runExecute(this: LangfuseExecuteContext): Promise<Array<Array<Nod
         continue;
       }
 
-      throw error;
+      throw toNodeError(this, error, itemIndex);
     }
   }
 

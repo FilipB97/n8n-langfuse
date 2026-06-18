@@ -68,6 +68,12 @@ export interface LangfuseExecuteContext {
   getNodeParameter(name: string, index: number): unknown;
   getCredentials(name: string): Promise<LangfuseCredentials>;
   continueOnFail?: () => boolean;
+  /**
+   * Returns the running node instance. Typed as `unknown` so the pure layer
+   * stays n8n-free; the node layer casts it to n8n-workflow's `INode` when
+   * constructing `NodeOperationError` / `NodeApiError`.
+   */
+  getNode?: () => unknown;
 }
 
 export interface LangfusePollContext {
