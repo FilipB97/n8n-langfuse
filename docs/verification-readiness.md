@@ -68,15 +68,16 @@ re-enabled and passing.
   instances without that package. Option: define the node's own minimal API-key
   credentials instead of borrowing core ones.
 
-### ❌ 3. README for verification
+### ⚠️ 3. README for verification
 
 Verification expects clear install/usage docs with at least one example. The
-README is good; before submitting, add per-node usage sections and a screenshot
-or two.
+README now has per-node usage sections (main node, trigger, AI node), install,
+credentials, and two example workflows. Remaining nice-to-have before
+submitting: a screenshot or two.
 
 ## Suggested order
 
 1. ~~Add `n8n-workflow` devDependency + `NodeOperationError`/`NodeApiError`~~ — done.
 2. Decide `LangfuseAi` scope / credentials (see ⚠️ 2).
-3. README polish + screenshots.
+3. ~~README per-node usage~~ — done; add screenshots before submitting.
 4. Submit `Langfuse` (+ `LangfuseTrigger`) for verification.
