@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { LangfuseApi, description as credentialDescription } from '../credentials/LangfuseApi.credentials.js';
 import { description as nodeDescription } from '../nodes/Langfuse/Langfuse.node.js';
 import { description as triggerDescription } from '../nodes/LangfuseTrigger/LangfuseTrigger.node.js';
+import { description as aiDescription } from '../nodes/LangfuseAi/LangfuseAi.node.js';
 
 function getProperty(name: string) {
   return nodeDescription.properties.find((property) => property.name === name);
@@ -39,4 +40,26 @@ test('Langfuse credential exposes a custom svg icon and credential test request'
   assert.equal(credentialType.icon, credentialDescription.icon);
   assert.equal(credentialType.authenticate, credentialDescription.authenticate);
   assert.equal(credentialType.test, credentialDescription.test);
+});
+
+test('Langfuse credential test base URL strips a trailing slash and an existing /api/public suffix', () => {
+  const baseURL = credentialDescription.test?.request.baseURL ?? '';
+  assert.ok(baseURL.startsWith('={{'), 'baseURL should be an expression');
+  // Strips a trailing slash, then an existing /api/public suffix.
+  assert.ok(/replace\(.*\$\/.*\)\.replace\(.*api.*public.*\)/.test(baseURL), baseURL);
+});
+
+test('Langfuse AI node offers OpenAI and Anthropic providers with provider-gated credentials', () => {
+  const provider = aiDescription.properties.find((p) => p.name === 'provider');
+  assert.ok(provider, 'provider property should exist');
+  assert.deepEqual(provider?.options?.map((o) => o.value), ['openai', 'anthropic']);
+
+  // Model is a free-text string so any current/new model id can be entered.
+  const model = aiDescription.properties.find((p) => p.name === 'model');
+  assert.equal(model?.type, 'string');
+
+  const openAiCred = aiDescription.credentials.find((c) => c.name === 'openAiApi');
+  const anthropicCred = aiDescription.credentials.find((c) => c.name === 'anthropicApi');
+  assert.deepEqual(openAiCred?.displayOptions?.show?.provider, ['openai']);
+  assert.deepEqual(anthropicCred?.displayOptions?.show?.provider, ['anthropic']);
 });

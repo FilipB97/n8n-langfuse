@@ -5,8 +5,10 @@ import {
   substitutePromptVariables,
   extractMessagesFromPrompt,
   callOpenAi,
+  callAnthropic,
   runLangfuseAi,
   type OpenAiCredentials,
+  type AnthropicCredentials,
 } from '../src/langfuseAi.js';
 import type { LangfuseCredentials } from '../src/langfuse.js';
 
@@ -193,6 +195,79 @@ test('callOpenAi — sends OpenAI-Organization header when organizationId set', 
 });
 
 // ---------------------------------------------------------------------------
+// callAnthropic
+// ---------------------------------------------------------------------------
+
+const FAKE_ANTHROPIC_RESPONSE = {
+  id: 'msg-test',
+  model: 'claude-opus-4-8',
+  content: [{ type: 'text', text: 'Bonjour!' }],
+  usage: { input_tokens: 12, output_tokens: 4 },
+  stop_reason: 'end_turn',
+};
+
+test('callAnthropic — sends correct request, headers, and splits system from messages', async () => {
+  const { calls, restore } = withFetch(() => ({ status: 200, body: FAKE_ANTHROPIC_RESPONSE }));
+  try {
+    const result = await callAnthropic({
+      apiKey: 'sk-ant-test',
+      model: 'claude-opus-4-8',
+      messages: [
+        { role: 'system', content: 'You are concise.' },
+        { role: 'user', content: 'Hi' },
+      ],
+    });
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, 'https://api.anthropic.com/v1/messages');
+    assert.equal(calls[0].method, 'POST');
+    assert.equal(calls[0].headers['x-api-key'], 'sk-ant-test');
+    assert.equal(calls[0].headers['anthropic-version'], '2023-06-01');
+    const body = calls[0].body as Record<string, unknown>;
+    assert.equal(body.system, 'You are concise.');
+    const messages = body.messages as Array<Record<string, unknown>>;
+    assert.equal(messages.length, 1);
+    assert.equal(messages[0].role, 'user');
+    assert.equal(result.content[0].text, 'Bonjour!');
+  } finally {
+    restore();
+  }
+});
+
+test('callAnthropic — defaults max_tokens when not provided', async () => {
+  const { calls, restore } = withFetch(() => ({ status: 200, body: FAKE_ANTHROPIC_RESPONSE }));
+  try {
+    await callAnthropic({ apiKey: 'sk-ant-test', model: 'claude-opus-4-8', messages: [{ role: 'user', content: 'Hi' }] });
+    assert.equal((calls[0].body as Record<string, unknown>).max_tokens, 1024);
+  } finally {
+    restore();
+  }
+});
+
+test('callAnthropic — forwards maxTokens and temperature', async () => {
+  const { calls, restore } = withFetch(() => ({ status: 200, body: FAKE_ANTHROPIC_RESPONSE }));
+  try {
+    await callAnthropic({ apiKey: 'sk-ant-test', model: 'claude-opus-4-8', messages: [], maxTokens: 200, temperature: 0.4 });
+    const body = calls[0].body as Record<string, unknown>;
+    assert.equal(body.max_tokens, 200);
+    assert.equal(body.temperature, 0.4);
+  } finally {
+    restore();
+  }
+});
+
+test('callAnthropic — throws on non-2xx status', async () => {
+  const { restore } = withFetch(() => ({ status: 401, body: { error: { message: 'invalid x-api-key' } } }));
+  try {
+    await assert.rejects(
+      () => callAnthropic({ apiKey: 'bad', model: 'claude-opus-4-8', messages: [] }),
+      /Anthropic request failed with status 401/,
+    );
+  } finally {
+    restore();
+  }
+});
+
+// ---------------------------------------------------------------------------
 // runLangfuseAi
 // ---------------------------------------------------------------------------
 
@@ -203,6 +278,99 @@ const LANGFUSE_CREDS: LangfuseCredentials = {
 };
 
 const OPENAI_CREDS: OpenAiCredentials = { apiKey: 'sk-openai-test' };
+const ANTHROPIC_CREDS: AnthropicCredentials = { apiKey: 'sk-ant-test' };
+
+test('runLangfuseAi — provider anthropic calls Messages API and normalizes content/usage', async () => {
+  const { calls, restore } = withFetch((call) => {
+    if (call.url.includes('anthropic.com')) return { status: 200, body: FAKE_ANTHROPIC_RESPONSE };
+    return { status: 200, body: { successes: [], errors: [] } };
+  });
+  try {
+    const result = await runLangfuseAi(
+      { provider: 'anthropic', model: 'claude-opus-4-8', userMessage: 'Bonjour', systemMessage: 'Be brief.' },
+      LANGFUSE_CREDS,
+      ANTHROPIC_CREDS,
+    );
+    assert.equal(result.provider, 'anthropic');
+    assert.equal(result.content, 'Bonjour!');
+    assert.equal(result.model, 'claude-opus-4-8');
+    assert.equal(result.usage.promptTokens, 12);
+    assert.equal(result.usage.completionTokens, 4);
+    assert.equal(result.usage.totalTokens, 16);
+    assert.equal(result.logged, true);
+    // Generation logged to Langfuse should be tagged with the provider name.
+    const ingestionCall = calls.find((c) => c.url.includes('ingestion'));
+    const batch = (ingestionCall?.body as Record<string, unknown>)?.batch as Array<Record<string, unknown>>;
+    const genEvent = batch?.find((e) => e.type === 'generation-create');
+    assert.equal((genEvent?.body as Record<string, unknown>)?.name, 'anthropic-completion');
+  } finally {
+    restore();
+  }
+});
+
+test('runLangfuseAi — baseUrl override targets an OpenAI-compatible endpoint', async () => {
+  const { calls, restore } = withFetch((call) => {
+    if (call.url.includes('openrouter')) return { status: 200, body: FAKE_OPENAI_RESPONSE };
+    return { status: 200, body: { successes: [], errors: [] } };
+  });
+  try {
+    await runLangfuseAi(
+      { model: 'gpt-4o', userMessage: 'Hi', baseUrl: 'https://openrouter.ai/api' },
+      LANGFUSE_CREDS,
+      OPENAI_CREDS,
+    );
+    const aiCall = calls.find((c) => c.url.includes('openrouter'));
+    assert.ok(aiCall, 'should call the overridden base URL');
+    assert.equal(aiCall?.url, 'https://openrouter.ai/api/v1/chat/completions');
+  } finally {
+    restore();
+  }
+});
+
+test('runLangfuseAi — reports logged:false and loggingError when ingestion fails', async () => {
+  const { restore } = withFetch((call) => {
+    if (call.url.includes('openai')) return { status: 200, body: FAKE_OPENAI_RESPONSE };
+    return { status: 400, body: { error: 'bad ingestion' } };
+  });
+  try {
+    const result = await runLangfuseAi(
+      { model: 'gpt-4o', userMessage: 'Hi' },
+      LANGFUSE_CREDS,
+      OPENAI_CREDS,
+    );
+    assert.equal(result.content, 'Hello!');
+    assert.equal(result.logged, false);
+    assert.ok(typeof result.loggingError === 'string' && result.loggingError.length > 0);
+  } finally {
+    restore();
+  }
+});
+
+test('runLangfuseAi — model failure logs an ERROR generation and rethrows', async () => {
+  const ingestionBatches: Array<Array<Record<string, unknown>>> = [];
+  const { restore } = withFetch((call) => {
+    if (call.url.includes('openai')) return { status: 400, body: { error: { message: 'bad request' } } };
+    if (call.url.includes('ingestion')) {
+      const batch = (call.body as Record<string, unknown>)?.batch as Array<Record<string, unknown>>;
+      if (Array.isArray(batch)) ingestionBatches.push(batch);
+      return { status: 200, body: { successes: [], errors: [] } };
+    }
+    return { status: 200, body: {} };
+  });
+  try {
+    await assert.rejects(
+      () => runLangfuseAi({ model: 'gpt-4o', userMessage: 'Hi' }, LANGFUSE_CREDS, OPENAI_CREDS),
+      /OpenAI request failed with status 400/,
+    );
+    const errorGen = ingestionBatches
+      .flat()
+      .find((e) => e.type === 'generation-create' && (e.body as Record<string, unknown>)?.level === 'ERROR');
+    assert.ok(errorGen, 'should have logged a generation with level ERROR');
+    assert.ok(typeof (errorGen?.body as Record<string, unknown>)?.statusMessage === 'string');
+  } finally {
+    restore();
+  }
+});
 
 test('runLangfuseAi — returns content, traceId, generationId, model, messages, usage', async () => {
   const { restore } = withFetch((call) => {

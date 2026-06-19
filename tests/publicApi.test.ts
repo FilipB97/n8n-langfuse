@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 
 import {
   buildLangfusePublicApiUrl,
+  extractListPage,
   requestLangfusePublicApi,
+  requestLangfusePublicApiAll,
   resolveLangfusePublicApiEndpoint,
 } from '../src/langfusePublicApi.js';
 
@@ -420,4 +422,91 @@ test('resolveLangfusePublicApiEndpoint resolves listAnnotationQueueItems with qu
     { path: '/annotation-queues/q-1/items', method: 'GET', query: { page: 2 } },
   );
   assert.throws(() => resolveLangfusePublicApiEndpoint('listAnnotationQueueItems', {}), /queueId is required/i);
+});
+
+// ---------------------------------------------------------------------------
+// Auto-pagination
+// ---------------------------------------------------------------------------
+
+test('extractListPage reads data array and meta.totalPages', () => {
+  assert.deepEqual(extractListPage({ data: [1, 2], meta: { totalPages: 3 } }), { items: [1, 2], totalPages: 3 });
+  assert.deepEqual(extractListPage([{ id: 'a' }]), { items: [{ id: 'a' }], totalPages: undefined });
+  assert.deepEqual(extractListPage({ nope: true }), { items: [], totalPages: undefined });
+  assert.deepEqual(extractListPage(null), { items: [], totalPages: undefined });
+});
+
+test('requestLangfusePublicApiAll walks every page using meta.totalPages', async () => {
+  const seenPages: number[] = [];
+  const fakeFetch: typeof fetch = async (input) => {
+    const url = new URL(String(input));
+    const page = Number(url.searchParams.get('page'));
+    seenPages.push(page);
+    const totalPages = 3;
+    const data = [{ id: `p${page}-a` }, { id: `p${page}-b` }];
+    return new Response(JSON.stringify({ data, meta: { page, totalPages } }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+
+  const result = await requestLangfusePublicApiAll({
+    baseUrl: 'https://cloud.langfuse.com',
+    publicKey: 'pk-test',
+    secretKey: 'sk-test',
+    path: '/traces',
+    fetchImpl: fakeFetch,
+  });
+
+  assert.deepEqual(seenPages, [1, 2, 3]);
+  assert.equal(result.pages, 3);
+  assert.equal(result.data.length, 6);
+});
+
+test('requestLangfusePublicApiAll stops on a short page when meta is absent', async () => {
+  let calls = 0;
+  const fakeFetch: typeof fetch = async (input) => {
+    calls += 1;
+    const url = new URL(String(input));
+    const limit = Number(url.searchParams.get('limit'));
+    // First page full, second page short → stop after second.
+    const data = calls === 1 ? Array.from({ length: limit }, (_, i) => ({ id: i })) : [{ id: 'last' }];
+    return new Response(JSON.stringify({ data }), { status: 200, headers: { 'content-type': 'application/json' } });
+  };
+
+  const result = await requestLangfusePublicApiAll({
+    baseUrl: 'https://cloud.langfuse.com',
+    publicKey: 'pk-test',
+    secretKey: 'sk-test',
+    path: '/v2/scores',
+    fetchImpl: fakeFetch,
+    pageSize: 2,
+  });
+
+  assert.equal(calls, 2);
+  assert.equal(result.data.length, 3);
+});
+
+test('requestLangfusePublicApiAll forwards base query params alongside pagination', async () => {
+  let capturedUrl = '';
+  const fakeFetch: typeof fetch = async (input) => {
+    capturedUrl = String(input);
+    return new Response(JSON.stringify({ data: [], meta: { totalPages: 1 } }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+
+  await requestLangfusePublicApiAll({
+    baseUrl: 'https://cloud.langfuse.com',
+    publicKey: 'pk-test',
+    secretKey: 'sk-test',
+    path: '/traces',
+    query: { userId: 'u-1' },
+    fetchImpl: fakeFetch,
+  });
+
+  const url = new URL(capturedUrl);
+  assert.equal(url.searchParams.get('userId'), 'u-1');
+  assert.equal(url.searchParams.get('page'), '1');
+  assert.ok(url.searchParams.get('limit'));
 });

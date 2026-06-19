@@ -13,6 +13,9 @@
   "publishConfig": {
     "access": "public"
   },
+  "engines": {
+    "node": ">=20.19"
+  },
   "keywords": [
     "n8n-community-node-package",
     "langfuse",
@@ -38,7 +41,7 @@
     "compile": "node ./scripts/clean-dist.mjs && tsc -p . && node ./scripts/copy-assets.mjs",
     "build": "npm run compile",
     "test": "tsx --test tests/*.test.ts",
-    "lint": "tsc -p . --noEmit && eslint \"nodes/**/*.ts\" \"credentials/**/*.ts\"",
+    "lint": "tsc -p . --noEmit && eslint \"nodes/**/*.ts\" \"credentials/**/*.ts\" --max-warnings 0",
     "lint:fix": "eslint \"nodes/**/*.ts\" \"credentials/**/*.ts\" --fix",
     "dev": "npm run compile",
     "package": "npm run compile"

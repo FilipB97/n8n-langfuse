@@ -4,12 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-`n8n-nodes-langfuse-studio` is a single n8n community node that talks to Langfuse two ways, selected by the node's `Resource` dropdown:
+`n8n-nodes-langfuse-studio` ships three n8n nodes plus one credential:
 
-- **Ingestion** (`resource: 'ingestion'`) — writes the legacy ingestion batch API: trace/span/generation/event/score/sdk-log creates and updates, plus a raw batch escape hatch.
-- **Public API** (`resource: 'publicApi'`) — reads health, prompts, traces, scores, observations, annotation queues, plus a custom-request escape hatch.
+- **`Langfuse`** (`nodes/Langfuse`) — the main action node, talking to Langfuse two ways via its `Resource` dropdown:
+  - **Ingestion** (`resource: 'ingestion'`) — writes the legacy ingestion batch API: trace/span/generation/event/score/sdk-log creates and updates, plus a raw batch escape hatch.
+  - **Public API** (`resource: 'publicApi'`) — reads health, prompts, traces, scores, observations, sessions, datasets, annotation queues, plus a custom-request escape hatch.
+  - It is versioned: V1 keeps the legacy `ingestion | publicApi` resource layout, V2 exposes an entity-based resource layout (trace/span/generation/score/…). Both share one `execute`.
+- **`LangfuseAi`** (`nodes/LangfuseAi`) — convenience node that fetches a Langfuse prompt (optional), calls an LLM, and logs the trace + generation to Langfuse automatically. Supports an OpenAI or Anthropic `Provider` (selecting which credential is required) and a free-text `Model` field. Logging is awaited but non-fatal: the AI call still succeeds if ingestion fails, and the outcome is reported on the output (`logged` / `loggingError`). Failed model calls are also logged to Langfuse as an `ERROR` generation.
+- **`LangfuseTrigger`** (`nodes/LangfuseTrigger`) — a polling trigger that emits new traces/scores/observations.
 
-Both authenticate with HTTP Basic Auth where the username is the Langfuse public key and the password is the secret key.
+The `Langfuse`/`LangfuseTrigger` nodes authenticate with the `langfuseApi` credential (HTTP Basic Auth: username = Langfuse public key, password = secret key). `LangfuseAi` additionally uses n8n's built-in `openAiApi` or `anthropicApi` credential depending on the selected provider.
 
 ## Commands
 
@@ -39,7 +43,7 @@ The code is layered so the Langfuse logic stays unit-testable without an n8n run
 3. **`src/nodeLogic.ts`** — the ingestion mapping layer. `buildEventsForOperation` switches on `LangfuseOperation` and converts the flat, string-heavy `LangfuseOperationParameters` (what the UI produces) into typed event inputs, then calls the `src/langfuse.ts` builders. `finalizeSpan` is the one operation that emits **two** events (a generation-create + a span-update).
 4. **`nodes/Langfuse/Langfuse.node.ts`** — the only n8n surface. Holds the full `description` (all properties/displayOptions), reads parameters off the execute context, dispatches to layers 2–3, and shapes the output items. `credentials/LangfuseApi.credentials.ts` defines the `langfuseApi` credential.
 
-**`src/n8n-lite.ts` is intentional, not a stopgap.** It hand-declares the slice of n8n's node/credential interfaces this package uses (`NodeDescription`, `LangfuseExecuteContext`, etc.) so nothing imports `n8n-workflow` at build time. The package depends on n8n only structurally (via the `n8n` block in `package.json`), which keeps builds and tests dependency-free. If you need an n8n capability that isn't typed here, add it to `n8n-lite.ts` rather than pulling in the real package.
+**`src/n8n-lite.ts` is intentional, not a stopgap.** It hand-declares the slice of n8n's node/credential interfaces this package uses (`NodeDescription`, `LangfuseExecuteContext`, etc.) so **nothing in the package imports `n8n-workflow`** — neither `src/**` nor `nodes/**`. This keeps the core unit-testable and the install free of dependencies. Notably, depending on `n8n-workflow` (e.g. for `NodeOperationError`/`NodeApiError`) drags in `@n8n/expression-runtime` → the native `isolated-vm` build, which breaks `npm ci` on CI runners — so the node throws plain `Error` and the `node-execute-block-wrong-error-thrown` lint rule is disabled (see `docs/verification-readiness.md`). If you need an n8n capability that isn't typed here, add it to `n8n-lite.ts` rather than pulling in the real package.
 
 `index.ts` → `src/index.ts` re-export everything, including the `Langfuse` node class and `LangfuseApi` credential class. `package.json`'s `n8n` block points n8n at the compiled `dist/` versions of those two classes.
 

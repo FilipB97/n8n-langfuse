@@ -55,6 +55,11 @@ function toItems(records: Array<Record<string, unknown>>): Array<Array<NodeInput
  *   against the previous boundary, so inclusive time filters do not re-emit.
  * - Manual mode (the editor's "fetch test event") returns one recent record
  *   without touching the stored cursor.
+ *
+ * Note: each poll fetches at most {@link POLL_LIMIT} records (the first page of
+ * the list endpoint). If more than that many records are created within a single
+ * polling interval, the overflow is not emitted — tighten the polling interval
+ * for high-volume projects so each window stays under the cap.
  */
 export async function pollLangfuse(context: LangfusePollContext): Promise<Array<Array<NodeInputItem>> | null> {
   const event = resolveEvent(context.getNodeParameter('event'));

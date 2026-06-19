@@ -34,6 +34,8 @@ Langfuse treats the Ingestion API as a legacy path and recommends OpenTelemetry 
 - `List Annotation Queues` / `Get Annotation Queue` / `List Annotation Queue Items`
 - `Custom Request`
 
+Every list operation has a **Return All** toggle: leave it off to fetch a single page (set `page`/`limit` via `Query JSON`), or turn it on to walk every page and return all matching records automatically.
+
 ### Datasets (Public API, v2 only)
 
 For building and running LLM evaluation sets:
@@ -54,7 +56,20 @@ The package also ships a **Langfuse Trigger** node that starts a workflow when n
 - `New Score`
 - `New Observation`
 
-The first poll establishes a baseline (it does not replay history); later polls emit only records created since the previous poll, de-duplicated by id. Use the editor's *Fetch Test Event* to pull one recent record without affecting the cursor.
+The first poll establishes a baseline (it does not replay history); later polls emit only records created since the previous poll, de-duplicated by id. Use the editor's *Fetch Test Event* to pull one recent record without affecting the cursor. Each poll fetches up to 100 records; for very high-volume projects, tighten the polling interval so each window stays under that cap.
+
+## Langfuse AI node
+
+The package also ships a **Langfuse AI** node — a convenience action that fetches a Langfuse prompt (optional), calls an LLM, and logs the trace + generation to Langfuse automatically, so you get an observed LLM call in one node.
+
+- **Provider**: `OpenAI` or `Anthropic` (the matching credential is requested based on the selection).
+- **Model**: free-text — use any model the provider exposes (e.g. `gpt-4o`, `gpt-4o-mini`, `claude-opus-4-8`, `claude-sonnet-4-6`, `claude-haiku-4-5`).
+- **Prompt**: optionally fetch a managed prompt by name (with label/version and `{{variable}}` substitution); otherwise provide a system message inline.
+- **Base URL** (advanced): point the OpenAI provider at any OpenAI-compatible endpoint (Gemini's OpenAI API, OpenRouter, Together, Ollama).
+- **Logging**: awaited but non-fatal — the AI call still returns if Langfuse logging fails, and the outcome is reported on the output (`logged` / `loggingError`). Failed model calls are logged to Langfuse as an `ERROR` generation.
+- **Output**: `content`, `provider`, `model`, `traceId`, `generationId`, `messages` (ready to chain into a follow-up turn), and `usage`.
+
+It uses the `Langfuse API` credential plus n8n's built-in `OpenAI` or `Anthropic` credential, depending on the provider.
 
 ## Installation
 
@@ -117,6 +132,7 @@ See:
 - `timestamp` is generated automatically when missing
 - `207 Multi-Status` responses are treated as valid ingestion responses
 - partial ingestion errors are returned in the output and can optionally fail the item
+- failures throw n8n's `NodeApiError` (HTTP errors, carrying status + body) or `NodeOperationError`, with item context; with **Continue On Fail** enabled they are captured on the item instead (`ok: false`, `error`, `status`)
 
 ## Build and Test
 

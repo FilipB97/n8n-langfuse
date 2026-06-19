@@ -1,7 +1,8 @@
 import { asString, parseJsonMaybe } from '../../src/langfuse.js';
 import {
   runLangfuseAi,
-  type OpenAiCredentials,
+  type ProviderCredentials,
+  type LlmProvider,
   type LangfuseAiInput,
 } from '../../src/langfuseAi.js';
 import type {
@@ -16,28 +17,35 @@ const description: NodeDescription = {
   icon: 'file:langfuse.svg',
   group: ['transform'],
   version: 1,
-  description: 'Fetches a Langfuse prompt, calls an AI model, and logs the trace and generation to Langfuse automatically.',
+  description: 'Fetches a Langfuse prompt, calls an OpenAI or Anthropic model, and logs the trace and generation to Langfuse automatically.',
   defaults: { name: 'Langfuse AI' },
   inputs: ['main'],
   outputs: ['main'],
   credentials: [
     { name: 'langfuseApi', required: true },
-    { name: 'openAiApi', required: true },
+    { name: 'openAiApi', required: true, displayOptions: { show: { provider: ['openai'] } } },
+    { name: 'anthropicApi', required: true, displayOptions: { show: { provider: ['anthropic'] } } },
   ],
   properties: [
     {
-      displayName: 'Model',
-      name: 'model',
+      displayName: 'Provider',
+      name: 'provider',
       type: 'options',
-      default: 'gpt-4o',
+      default: 'openai',
       noDataExpression: true,
       options: [
-        { name: 'GPT-4o', value: 'gpt-4o', description: 'Most capable multimodal GPT-4 model' },
-        { name: 'GPT-4o Mini', value: 'gpt-4o-mini', description: 'Affordable and fast GPT-4o model' },
-        { name: 'GPT-4 Turbo', value: 'gpt-4-turbo', description: 'GPT-4 Turbo with vision capabilities' },
-        { name: 'GPT-3.5 Turbo', value: 'gpt-3.5-turbo', description: 'Fast and cost-effective' },
+        { name: 'OpenAI', value: 'openai', description: 'Call the OpenAI Chat Completions API (requires OpenAI credentials)' },
+        { name: 'Anthropic', value: 'anthropic', description: 'Call the Anthropic Messages API (requires Anthropic credentials)' },
       ],
-      description: 'OpenAI model to use for the completion',
+      description: 'Which AI provider to call',
+    },
+    {
+      displayName: 'Model',
+      name: 'model',
+      type: 'string',
+      default: 'gpt-4o',
+      placeholder: 'gpt-4o',
+      description: 'Model ID to use for the completion. For OpenAI use e.g. gpt-4o or gpt-4o-mini; for Anthropic use e.g. claude-opus-4-8, claude-sonnet-4-6, or claude-haiku-4-5. Any model the provider exposes is accepted.',
     },
     {
       displayName: 'User Message',
@@ -169,6 +177,15 @@ const description: NodeDescription = {
       description: 'Environment label to attach to the trace and generation',
       displayOptions: { show: { showAdvancedFields: [true] } },
     },
+    {
+      displayName: 'Base URL',
+      name: 'baseUrl',
+      type: 'string',
+      default: '',
+      placeholder: 'https://openrouter.ai/api',
+      description: 'Override the provider base URL. For OpenAI this enables any OpenAI-compatible endpoint (Gemini OpenAI API, OpenRouter, Together, Ollama). Leave blank to use the credential default.',
+      displayOptions: { show: { showAdvancedFields: [true] } },
+    },
   ],
 };
 
@@ -192,12 +209,24 @@ export class LangfuseAi {
 
   async execute(this: LangfuseExecuteContext): Promise<Array<Array<NodeInputItem>>> {
     const langfuseCreds = await this.getCredentials('langfuseApi');
-    const openAiCreds = await this.getCredentials('openAiApi') as unknown as OpenAiCredentials;
     const items = this.getInputData();
     const results: NodeInputItem[] = [];
 
+    // Credentials depend on the selected provider; resolve lazily and cache per
+    // provider so a multi-item run only fetches each credential once.
+    const providerCredsCache = new Map<LlmProvider, ProviderCredentials>();
+    const getProviderCreds = async (provider: LlmProvider): Promise<ProviderCredentials> => {
+      const cached = providerCredsCache.get(provider);
+      if (cached) return cached;
+      const credName = provider === 'anthropic' ? 'anthropicApi' : 'openAiApi';
+      const creds = await this.getCredentials(credName) as unknown as ProviderCredentials;
+      providerCredsCache.set(provider, creds);
+      return creds;
+    };
+
     for (const [itemIndex] of items.entries()) {
       try {
+        const provider = (asString(getOptionalNodeParameter(this, 'provider', itemIndex)) ?? 'openai') as LlmProvider;
         const model = asString(this.getNodeParameter('model', itemIndex)) ?? 'gpt-4o';
         const userMessage = asString(this.getNodeParameter('userMessage', itemIndex)) ?? '';
         const promptName = asString(getOptionalNodeParameter(this, 'promptName', itemIndex));
@@ -215,6 +244,7 @@ export class LangfuseAi {
         let userId: string | undefined;
         let tags: string[] | undefined;
         let environment: string | undefined;
+        let baseUrl: string | undefined;
 
         if (showAdvanced) {
           const prevMsgRaw = getOptionalNodeParameter(this, 'previousMessagesJson', itemIndex);
@@ -259,6 +289,7 @@ export class LangfuseAi {
           sessionId = asString(getOptionalNodeParameter(this, 'sessionId', itemIndex));
           userId = asString(getOptionalNodeParameter(this, 'userId', itemIndex));
           environment = asString(getOptionalNodeParameter(this, 'environment', itemIndex));
+          baseUrl = asString(getOptionalNodeParameter(this, 'baseUrl', itemIndex));
 
           const tagsRaw = getOptionalNodeParameter(this, 'tagsJson', itemIndex);
           if (tagsRaw) {
@@ -270,6 +301,8 @@ export class LangfuseAi {
         }
 
         const input: LangfuseAiInput = {
+          provider,
+          ...(baseUrl ? { baseUrl } : {}),
           model,
           userMessage,
           ...(promptName ? { promptName } : systemMessage ? { systemMessage } : {}),
@@ -286,16 +319,20 @@ export class LangfuseAi {
           ...(environment ? { environment } : {}),
         };
 
-        const result = await runLangfuseAi(input, langfuseCreds, openAiCreds);
+        const providerCreds = await getProviderCreds(provider);
+        const result = await runLangfuseAi(input, langfuseCreds, providerCreds);
 
         results.push({
           json: {
             content: result.content,
             traceId: result.traceId,
             generationId: result.generationId,
+            provider: result.provider,
             model: result.model,
             messages: result.messages,
             usage: result.usage,
+            logged: result.logged,
+            ...(result.loggingError !== undefined ? { loggingError: result.loggingError } : {}),
           },
           pairedItem: { item: itemIndex },
         });

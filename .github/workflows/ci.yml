@@ -14,14 +14,19 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["20", "22"]
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Set up Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: ${{ matrix.node-version }}
 
       - name: Install dependencies
         run: npm ci
@@ -29,8 +34,26 @@ jobs:
       - name: Type check
         run: ./node_modules/.bin/tsc -p . --noEmit
 
-      - name: Lint (n8n node conventions)
-        run: ./node_modules/.bin/eslint "nodes/**/*.ts" "credentials/**/*.ts"
+      - name: Lint (n8n node conventions, warnings fail)
+        run: ./node_modules/.bin/eslint "nodes/**/*.ts" "credentials/**/*.ts" --max-warnings 0
 
       - name: Run tests
-        run: ./node_modules/.bin/tsx --test tests/**/*.test.ts
+        # Use the npm script (tests/*.test.ts) — the shell expands it to explicit
+        # files. A `**` glob would rely on the runner's test-runner glob support,
+        # which Node 20 lacks (only Node >=21), so it must not be used here.
+        run: npm test
+
+      - name: Build package (dist + assets)
+        run: npm run compile
+
+      - name: Verify packaged contents
+        run: |
+          set -euo pipefail
+          # The published tarball must ship the compiled node/credential classes
+          # referenced by the package.json "n8n" block — fail loudly if missing.
+          test -f dist/nodes/Langfuse/Langfuse.node.js
+          test -f dist/nodes/LangfuseAi/LangfuseAi.node.js
+          test -f dist/nodes/LangfuseTrigger/LangfuseTrigger.node.js
+          test -f dist/credentials/LangfuseApi.credentials.js
+          test -f dist/nodes/Langfuse/langfuse.svg
+          npm pack --dry-run

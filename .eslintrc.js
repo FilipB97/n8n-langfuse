@@ -20,9 +20,11 @@ module.exports = {
       plugins: ['eslint-plugin-n8n-nodes-base'],
       extends: ['plugin:n8n-nodes-base/nodes'],
       rules: {
-        // This node runs on a framework-agnostic execution layer (src/n8n-lite.ts)
-        // and intentionally does not depend on `n8n-workflow`, so it throws plain
-        // Error instead of NodeOperationError/NodeApiError.
+        // The node runs on a framework-agnostic execution layer (src/n8n-lite.ts)
+        // and intentionally does not depend on `n8n-workflow`: adding it pulls in
+        // the native `isolated-vm` build (via @n8n/expression-runtime), which is
+        // heavy and breaks `npm ci` on CI runners. So the node throws plain Error
+        // instead of NodeOperationError/NodeApiError. See docs/verification-readiness.md.
         'n8n-nodes-base/node-execute-block-wrong-error-thrown': 'off',
       },
     },

@@ -1,8 +1,8 @@
 import { createHash, randomBytes } from 'node:crypto';
 
 export type JsonPrimitive = string | number | boolean | null;
-export type JsonValue = any;
-export type JsonObject = Record<string, any>;
+export type JsonValue = unknown;
+export type JsonObject = Record<string, unknown>;
 
 export type IngestionEventType =
   | 'trace-create'
