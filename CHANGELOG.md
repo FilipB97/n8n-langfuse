@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-06-19
+
+### Added
+
+- **`LangfuseAi` — Anthropic provider.** New `Provider` selector (OpenAI | Anthropic). The matching credential (`openAiApi` / `anthropicApi`) is requested based on the selection, and the call targets the Anthropic Messages API when Anthropic is chosen.
+- **`LangfuseAi` — free-text `Model` field.** Any model the provider exposes can be entered (e.g. `gpt-4o`, `gpt-4o-mini`, `claude-opus-4-8`, `claude-sonnet-4-6`, `claude-haiku-4-5`), replacing the fixed dropdown so new models don't require a node release.
+- **`LangfuseAi` — `Base URL` override (advanced).** Point the OpenAI provider at any OpenAI-compatible endpoint (Gemini's OpenAI API, OpenRouter, Together, Ollama).
+- **`Langfuse` — "Return All" for list operations.** Opt-in auto-pagination walks every page of a Public API list endpoint and returns all matching records. Default off, so existing single-page behavior is unchanged.
+
+### Changed
+
+- **`LangfuseAi` — logging is now awaited but non-fatal.** The AI call still succeeds if Langfuse ingestion fails; the outcome is reported on the output (`logged` / `loggingError`) instead of being silently dropped. Failed model calls are also logged to Langfuse as an `ERROR` generation. The model call now has retry (429/5xx) and timeout handling.
+- **`Langfuse` — richer `Continue On Fail` errors.** Failed API calls now include the HTTP `status` and response `errorBody` on the item, not just the message.
+- **New Langfuse logo** used as the icon for all nodes and the credential.
+
+### Fixed
+
+- **Credential test base URL.** The credential test now strips a trailing slash and an existing `/api/public` suffix, matching the runtime URL builders, so the test no longer fails when the base URL already ends in `/api/public`.
+
+### Internal
+
+- CI hardened: zero-warning lint gate, Node 20 + 22 matrix, build + packaged-content verification, `engines.node >= 20.19`, and `docs/verification-readiness.md` tracking the path to an n8n verified community node.
+
 ## [1.7.1] - 2026-06-09
 
 ### Fixed
