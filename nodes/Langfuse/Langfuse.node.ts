@@ -52,12 +52,17 @@ function asErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function buildIngestionParameters(context: LangfuseExecuteContext, itemIndex: number): LangfuseOperationParameters {
+function buildIngestionParameters(context: LangfuseExecuteContext, itemIndex: number, operation: string): LangfuseOperationParameters {
   const params: LangfuseOperationParameters = {};
 
-  const traceId = asString(getOptionalNodeParameter(context, 'traceId', itemIndex));
+  // The data coming from the previous node. Used to auto-link ids when the
+  // corresponding field is left blank (e.g. Span Create's output carries
+  // `traceId`/`observationId`), so a chained flow works without wiring.
+  const inputJson = (context.getInputData()[itemIndex]?.json ?? {}) as Record<string, unknown>;
+
+  let traceId = asString(getOptionalNodeParameter(context, 'traceId', itemIndex));
   const eventId = asString(getOptionalNodeParameter(context, 'eventId', itemIndex));
-  const observationId = asString(getOptionalNodeParameter(context, 'observationId', itemIndex));
+  let observationId = asString(getOptionalNodeParameter(context, 'observationId', itemIndex));
   const parentObservationId = asString(getOptionalNodeParameter(context, 'parentObservationId', itemIndex));
   const timestamp = asString(getOptionalNodeParameter(context, 'timestamp', itemIndex));
   const name = asString(getOptionalNodeParameter(context, 'name', itemIndex));
@@ -85,6 +90,17 @@ function buildIngestionParameters(context: LangfuseExecuteContext, itemIndex: nu
   const sdkMessage = asString(getOptionalNodeParameter(context, 'sdkMessage', itemIndex));
   const sdkLevel = getOptionalNodeParameter(context, 'sdkLevel', itemIndex) as 'debug' | 'info' | 'warn' | 'error' | undefined;
   const environment = asString(getOptionalNodeParameter(context, 'environment', itemIndex));
+
+  // Auto-link from the previous step's output when the field is blank.
+  // traceId: every op except Trace Create (which mints its own).
+  if (traceId === undefined && operation !== 'traceCreate') {
+    traceId = asString(inputJson.traceId);
+  }
+  // observationId: update/finalize ops reference an existing observation, so
+  // fall back to the previous step's observationId (e.g. from Span Create).
+  if (observationId === undefined && (operation === 'spanUpdate' || operation === 'generationUpdate' || operation === 'finalizeSpan')) {
+    observationId = asString(inputJson.observationId);
+  }
 
   if (traceId !== undefined) params.traceId = traceId;
   if (eventId !== undefined) params.eventId = eventId;
@@ -323,7 +339,7 @@ async function runExecute(this: LangfuseExecuteContext): Promise<Array<Array<Nod
     try {
       if (INGESTION_OPERATIONS.has(operation)) {
         const failOnBatchErrors = Boolean(getOptionalNodeParameter(this, 'failOnBatchErrors', itemIndex));
-        const params = buildIngestionParameters(this, itemIndex);
+        const params = buildIngestionParameters(this, itemIndex, operation);
         const events = buildEventsForOperation(operation as LangfuseOperation, params);
         const response = await withRetry(() =>
           sendLangfuseIngestion({

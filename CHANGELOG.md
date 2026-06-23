@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.4] - 2026-06-23
+
+### Fixed
+
+- **Reliable id auto-linking from the previous step.** When `Trace ID` / `Observation ID` are left blank, the node now reads them from the previous node's output data **in code** (not only via the field's default expression, which could be skipped). So `Span Create` picks up `traceId`, and `Span Update` / `Generation Update` / `Finalize Span` pick up `observationId` from the upstream Span Create output — fixing "observationId is required for finalizeSpan" and spans landing in their own (empty) trace when the operation is wired directly after the step that produced the id. `Trace Create` still mints its own id. For non-adjacent steps (e.g. an LLM node in between), reference the source node explicitly, e.g. `={{ $('Span Create').item.json.observationId }}`.
+
 ## [1.9.3] - 2026-06-23
 
 ### Fixed
