@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`Trace Create` now defaults `sessionId` to the trace's own id** (instead of a random `session-<hex>`), so one id drives both the trace and its session with no wiring and the trace always lands in a session. Set `Session ID` explicitly to override or to group several traces under one session.
 - **`User ID` and `Session ID` (Trace Create) moved out of Advanced Fields** so all identity/linking fields are visible by default (joining `Trace ID`, `Observation ID`, `Parent Observation ID`). Genuinely optional fields (metadata, tags, version, level, status message, timing, model parameters) stay under Advanced Fields.
 
 ### Docs

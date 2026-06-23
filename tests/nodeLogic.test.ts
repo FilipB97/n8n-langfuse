@@ -138,21 +138,31 @@ test('buildPromptRequestParameters allows prompt name only', () => {
   });
 });
 
-test('traceCreate auto-generates a sessionId when none is provided', () => {
+test('traceCreate defaults sessionId to the (auto-generated) trace id', () => {
   const events = buildEventsForOperation('traceCreate', { name: 'checkout' });
-  const sessionId = (events[0]?.body as { sessionId?: unknown }).sessionId;
-  assert.match(String(sessionId), /^session-[0-9a-f]{16}$/);
+  const body = events[0]?.body as { id?: unknown; sessionId?: unknown };
+  assert.match(String(body.id), /^[0-9a-f]{32}$/);
+  assert.equal(body.sessionId, body.id);
 });
 
-test('traceCreate keeps an explicit sessionId', () => {
-  const events = buildEventsForOperation('traceCreate', { name: 'checkout', sessionId: 'conversation-42' });
-  assert.equal((events[0]?.body as { sessionId?: unknown }).sessionId, 'conversation-42');
+test('traceCreate defaults sessionId to an explicit trace id', () => {
+  const events = buildEventsForOperation('traceCreate', { name: 'checkout', traceId: 'trace-xyz' });
+  const body = events[0]?.body as { id?: unknown; sessionId?: unknown };
+  assert.equal(body.id, 'trace-xyz');
+  assert.equal(body.sessionId, 'trace-xyz');
 });
 
-test('summarizeIngestionEvents surfaces the (auto-generated) sessionId for traceCreate', () => {
+test('traceCreate keeps an explicit sessionId over the trace id', () => {
+  const events = buildEventsForOperation('traceCreate', { name: 'checkout', traceId: 'trace-xyz', sessionId: 'conversation-42' });
+  const body = events[0]?.body as { id?: unknown; sessionId?: unknown };
+  assert.equal(body.id, 'trace-xyz');
+  assert.equal(body.sessionId, 'conversation-42');
+});
+
+test('summarizeIngestionEvents surfaces the sessionId (= trace id by default) for traceCreate', () => {
   const events = buildEventsForOperation('traceCreate', { name: 'checkout' });
   const summary = summarizeIngestionEvents(events);
-  assert.match(String(summary.sessionId), /^session-/);
+  assert.equal(summary.sessionId, summary.traceId);
 });
 
 test('summarizeIngestionEvents reports the trace id a span attaches to', () => {

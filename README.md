@@ -126,7 +126,7 @@ See:
 
 - JSON fields accept either JSON strings or already-parsed objects
 - `Trace Create` auto-generates a trace id when `Trace ID` is left blank
-- `Trace Create` auto-generates a `Session ID` when left blank (so the trace appears in Langfuse's Sessions view); pass a stable `Session ID` to group related traces. The id used is returned on the output as `sessionId`
+- `Trace Create` defaults `Session ID` to the trace's own id when left blank (so a single id drives both and the trace always lands in a session); set `Session ID` to override or to group several traces under one session. The id used is returned on the output as `sessionId`
 - Ingestion operations return the ids they wrote (`traceId`, `sessionId`, `ids`, `eventIds`) so later spans/scores can attach to the same trace via expressions
 - On `Span`/`Generation`/`Event`/`Score` operations the `Trace ID` field **auto-fills from the previous step** (`={{ $json.traceId }}`), so chaining `Trace Create → Span Create` links them with no manual wiring; clear it to start a new trace. If the span runs **several steps later** (not directly after Trace Create), reference the trace node by name instead, e.g. `={{ $('Trace Create').item.json.traceId }}`
 - Identity/linking fields are shown by default (not under Advanced Fields): `Trace ID`, `Observation ID`, `Parent Observation ID`, and `User ID` / `Session ID` on Trace Create. Genuinely optional fields (metadata, tags, version, level, status message, timing, model parameters) stay under Advanced Fields

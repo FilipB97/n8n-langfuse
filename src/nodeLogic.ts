@@ -6,7 +6,7 @@ import {
   createObservationId,
   createScoreEvent,
   createSdkLogEvent,
-  createSessionId,
+  createTraceId,
   createSpanEvent,
   createSpanUpdateEvent,
   createTraceEvent,
@@ -235,15 +235,17 @@ function toTraceInput(params: LangfuseOperationParameters): TraceEventInput {
   const sessionId = asString(params.sessionId);
   const version = asString(params.version);
 
-  if (traceId !== undefined) input.traceId = traceId;
   if (eventId !== undefined) input.eventId = eventId;
   if (timestamp !== undefined) input.timestamp = timestamp;
   if (name !== undefined) input.name = name;
   if (userId !== undefined) input.userId = userId;
-  // Auto-generate a session id when none is provided so every trace is grouped
-  // into a session and appears in Langfuse's Sessions view. Pass an explicit
-  // (stable) sessionId to group related traces together instead.
-  input.sessionId = sessionId ?? createSessionId();
+  // Default the session to the trace's own id (resolving the trace id here when
+  // it's auto-generated), so a single id drives both without any wiring — a trace
+  // always lands in a session. Pass an explicit sessionId to override / group
+  // multiple traces under one session.
+  const resolvedTraceId = traceId ?? createTraceId();
+  input.traceId = resolvedTraceId;
+  input.sessionId = sessionId ?? resolvedTraceId;
   if (params.public !== undefined) input.public = params.public;
   const tags = parseTags(params.tags);
   if (tags !== undefined) input.tags = tags;

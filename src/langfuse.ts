@@ -245,10 +245,6 @@ export function createObservationId(seed?: string): string {
   return createHash('sha256').update(seed).digest('hex').slice(0, 16);
 }
 
-export function createSessionId(): string {
-  return `session-${randomBytes(8).toString('hex')}`;
-}
-
 export function currentTimestamp(): string {
   return new Date().toISOString();
 }
