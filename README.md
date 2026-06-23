@@ -134,6 +134,7 @@ See:
 - `Span Update`, `Generation Update`, and `Finalize Span` require an `Observation ID` (auto-filled from the previous step's `observationId`; `Finalize Span` exposes the full generation field set — model, input/output, usage, etc.)
 - `Score Create` requires a score value plus either a trace id or a session id
 - `timestamp` is generated automatically when missing
+- timing is auto-filled: `Span`/`Generation Create` default `startTime` to now, updates default `endTime` to now, and `Finalize Span` closes the span — so observations always render with timing in Langfuse (set the fields to override)
 - `207 Multi-Status` responses are treated as valid ingestion responses
 - partial ingestion errors are returned in the output and can optionally fail the item
 - failures throw n8n's `NodeApiError` (HTTP errors, carrying status + body) or `NodeOperationError`, with item context; with **Continue On Fail** enabled they are captured on the item instead (`ok: false`, `error`, `status`)

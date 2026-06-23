@@ -41,6 +41,27 @@ test('buildEventsForOperation parses score values and raw batches', () => {
   assert.equal(rawEvents[0]?.id, 'evt-1');
 });
 
+test('span/generation create default startTime, updates default endTime, finalize closes the span', () => {
+  const isoRe = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
+  const span = buildEventsForOperation('spanCreate', { traceId: 't', observationId: 's' });
+  assert.match(String((span[0]?.body as { startTime?: unknown }).startTime), isoRe);
+
+  const gen = buildEventsForOperation('generationCreate', { traceId: 't', observationId: 'g' });
+  assert.match(String((gen[0]?.body as { startTime?: unknown }).startTime), isoRe);
+
+  const spanUpd = buildEventsForOperation('spanUpdate', { traceId: 't', observationId: 's' });
+  assert.match(String((spanUpd[0]?.body as { endTime?: unknown }).endTime), isoRe);
+
+  const fin = buildEventsForOperation('finalizeSpan', { traceId: 't', observationId: 's' });
+  const spanUpdate = fin.find((e) => e.type === 'span-update');
+  assert.match(String((spanUpdate?.body as { endTime?: unknown }).endTime), isoRe);
+});
+
+test('explicit startTime/endTime are preserved over the defaults', () => {
+  const span = buildEventsForOperation('spanCreate', { traceId: 't', observationId: 's', startTime: '2026-01-01T00:00:00.000Z' });
+  assert.equal((span[0]?.body as { startTime?: unknown }).startTime, '2026-01-01T00:00:00.000Z');
+});
+
 test('buildEventsForOperation requires observation ids for update operations', () => {
   assert.throws(() => buildEventsForOperation('spanUpdate', {
     traceId: '1234567890abcdef1234567890abcdef',
