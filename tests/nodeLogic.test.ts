@@ -169,6 +169,7 @@ test('summarizeIngestionEvents reports the trace id a span attaches to', () => {
   const events = buildEventsForOperation('spanCreate', { traceId: 'trace-123', observationId: 'span-1', name: 'work' });
   const summary = summarizeIngestionEvents(events);
   assert.equal(summary.traceId, 'trace-123');
+  assert.equal(summary.observationId, 'span-1');
   assert.deepEqual(summary.ids, ['span-1']);
   assert.equal(summary.eventIds.length, 1);
 });

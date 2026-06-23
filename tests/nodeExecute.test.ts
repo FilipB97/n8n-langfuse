@@ -122,6 +122,24 @@ test('ingestion output surfaces the traceId and entity ids so spans can be chain
   }
 });
 
+test('finalizeSpan works with an observation id and returns generation + span-update', async () => {
+  const stub = withFetch(() => ({ status: 207, body: { successes: [{ id: 'span-1_gen' }, { id: 'span-1' }], errors: [] } }));
+  try {
+    const ctx = makeContext({
+      paramsByIndex: [{ resource: 'generation', operation: 'finalizeSpan', traceId: 'tr-1', observationId: 'span-1', model: 'gpt-4o' }],
+    });
+    const [out] = await execute(ctx);
+    assert.equal(out[0]?.json.ok, true);
+    assert.equal(out[0]?.json.batchSize, 2);
+    assert.equal(out[0]?.json.traceId, 'tr-1');
+    // The batch sends a generation-create + span-update for the finalized span.
+    const batch = (stub.calls[0]?.body as Record<string, unknown>)?.batch as Array<Record<string, unknown>>;
+    assert.deepEqual(batch.map((e) => e.type), ['generation-create', 'span-update']);
+  } finally {
+    stub.restore();
+  }
+});
+
 test('routes createDataset to a POST with a JSON body', async () => {
   const stub = withFetch(() => ({ status: 200, body: { id: 'ds-1', name: 'd1' } }));
   try {

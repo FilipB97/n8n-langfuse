@@ -171,6 +171,8 @@ export interface IngestionEventSummary {
   traceId?: string;
   /** The session attached to the trace/score (provided or auto-generated). */
   sessionId?: string;
+  /** The primary observation id written (span/generation/event), for chaining updates/finalize. */
+  observationId?: string;
   /** Every entity id written (observation ids, score id, or the trace id). */
   ids: string[];
   /** The ingestion envelope event ids (useful for idempotency/debugging). */
@@ -218,9 +220,22 @@ export function summarizeIngestionEvents(events: IngestionEvent[]): IngestionEve
     }
   }
 
+  const OBSERVATION_TYPES = new Set(['span-create', 'span-update', 'generation-create', 'generation-update', 'event-create']);
+  let observationId: string | undefined;
+  for (const event of events) {
+    if (OBSERVATION_TYPES.has(event.type)) {
+      const oid = bodyString(event.body, 'id');
+      if (oid !== undefined) {
+        observationId = oid;
+        break;
+      }
+    }
+  }
+
   const summary: IngestionEventSummary = { ids, eventIds };
   if (traceId !== undefined) summary.traceId = traceId;
   if (sessionId !== undefined) summary.sessionId = sessionId;
+  if (observationId !== undefined) summary.observationId = observationId;
   return summary;
 }
 
