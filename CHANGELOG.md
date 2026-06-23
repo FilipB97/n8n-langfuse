@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.2] - 2026-06-23
+
+### Changed
+
+- **`User ID` and `Session ID` (Trace Create) moved out of Advanced Fields** so all identity/linking fields are visible by default (joining `Trace ID`, `Observation ID`, `Parent Observation ID`). Genuinely optional fields (metadata, tags, version, level, status message, timing, model parameters) stay under Advanced Fields.
+
+### Docs
+
+- Documented how to attach a span that runs **several steps after** Trace Create (when `={{ $json.traceId }}` no longer points at the trace): reference the trace node by name, e.g. `={{ $('Trace Create').item.json.traceId }}`.
+
 ## [1.9.1] - 2026-06-23
 
 ### Added
