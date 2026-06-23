@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildEventsForOperation, buildPromptRequestParameters, parseTags } from '../src/nodeLogic.js';
+import { buildEventsForOperation, buildPromptRequestParameters, parseTags, summarizeIngestionEvents } from '../src/nodeLogic.js';
 
 test('parseTags trims comma-separated tags and ignores blanks', () => {
   assert.deepEqual(parseTags(' alpha, beta , ,gamma '), ['alpha', 'beta', 'gamma']);
@@ -136,4 +136,29 @@ test('buildPromptRequestParameters allows prompt name only', () => {
   assert.deepEqual(request, {
     promptName: 'answer-query',
   });
+});
+
+test('summarizeIngestionEvents reports the trace id a span attaches to', () => {
+  const events = buildEventsForOperation('spanCreate', { traceId: 'trace-123', observationId: 'span-1', name: 'work' });
+  const summary = summarizeIngestionEvents(events);
+  assert.equal(summary.traceId, 'trace-123');
+  assert.deepEqual(summary.ids, ['span-1']);
+  assert.equal(summary.eventIds.length, 1);
+});
+
+test('summarizeIngestionEvents returns an auto-generated trace id for traceCreate', () => {
+  const events = buildEventsForOperation('traceCreate', { name: 'checkout' });
+  const summary = summarizeIngestionEvents(events);
+  // traceId is the trace's own (auto-generated) id, and matches the entity id written.
+  assert.ok(summary.traceId && summary.traceId.length > 0);
+  assert.deepEqual(summary.ids, [summary.traceId]);
+});
+
+test('summarizeIngestionEvents covers both events of finalizeSpan', () => {
+  const events = buildEventsForOperation('finalizeSpan', { traceId: 'trace-9', observationId: 'span-9' });
+  const summary = summarizeIngestionEvents(events);
+  assert.equal(summary.traceId, 'trace-9');
+  // generation id + the span id being finalized
+  assert.equal(summary.ids.length, 2);
+  assert.ok(summary.ids.includes('span-9'));
 });

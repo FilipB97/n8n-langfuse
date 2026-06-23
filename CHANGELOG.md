@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.1] - 2026-06-19
+
+### Fixed
+
+- **Ingestion output now returns the written ids (`traceId`, `ids`, `eventIds`).** Previously the node never surfaced the trace/observation ids it sent, so when a trace used an auto-generated id you couldn't reliably attach a later span/score to it — the span would create its own trace and appear disconnected. Expressions can now read `{{$json.traceId}}` / `{{$json.ids[0]}}` to chain operations. (Reminder: `sessionId` is a trace-level field — set it on Trace Create, not on a span.)
+
 ## [1.8.0] - 2026-06-19
 
 ### Added

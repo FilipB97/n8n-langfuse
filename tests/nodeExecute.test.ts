@@ -107,6 +107,21 @@ test('routes an ingestion operation to /ingestion and reports batch results', as
   }
 });
 
+test('ingestion output surfaces the traceId and entity ids so spans can be chained', async () => {
+  const stub = withFetch(() => ({ status: 207, body: { successes: [{ id: 'span-1' }], errors: [] } }));
+  try {
+    const ctx = makeContext({
+      paramsByIndex: [{ resource: 'span', operation: 'spanCreate', traceId: 'trace-abc', observationId: 'span-1', name: 'work' }],
+    });
+    const [out] = await execute(ctx);
+    assert.equal(out[0]?.json.traceId, 'trace-abc');
+    assert.deepEqual(out[0]?.json.ids, ['span-1']);
+    assert.ok(Array.isArray(out[0]?.json.eventIds));
+  } finally {
+    stub.restore();
+  }
+});
+
 test('routes createDataset to a POST with a JSON body', async () => {
   const stub = withFetch(() => ({ status: 200, body: { id: 'ds-1', name: 'd1' } }));
   try {
