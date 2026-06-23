@@ -140,6 +140,42 @@ test('finalizeSpan works with an observation id and returns generation + span-up
   }
 });
 
+test('finalizeSpan auto-links traceId/observationId from the previous step when fields are blank', async () => {
+  const stub = withFetch(() => ({ status: 207, body: { successes: [], errors: [] } }));
+  try {
+    const ctx = makeContext({
+      paramsByIndex: [{ resource: 'generation', operation: 'finalizeSpan', model: 'gpt-4o' }],
+      items: [{ json: { traceId: 'tr-9', observationId: 'span-9' } }],
+    });
+    const [out] = await execute(ctx);
+    assert.equal(out[0]?.json.ok, true);
+    const batch = (stub.calls[0]?.body as Record<string, unknown>)?.batch as Array<Record<string, unknown>>;
+    const gen = batch.find((e) => e.type === 'generation-create');
+    const spanUpd = batch.find((e) => e.type === 'span-update');
+    assert.equal((gen?.body as Record<string, unknown>)?.traceId, 'tr-9');
+    assert.equal((gen?.body as Record<string, unknown>)?.parentObservationId, 'span-9');
+    assert.equal((spanUpd?.body as Record<string, unknown>)?.id, 'span-9');
+  } finally {
+    stub.restore();
+  }
+});
+
+test('spanCreate auto-links traceId from the previous step when the field is blank', async () => {
+  const stub = withFetch(() => ({ status: 207, body: { successes: [{ id: 's' }], errors: [] } }));
+  try {
+    const ctx = makeContext({
+      paramsByIndex: [{ resource: 'span', operation: 'spanCreate', name: 'work' }],
+      items: [{ json: { traceId: 'tr-7' } }],
+    });
+    const [out] = await execute(ctx);
+    assert.equal(out[0]?.json.traceId, 'tr-7');
+    const batch = (stub.calls[0]?.body as Record<string, unknown>)?.batch as Array<Record<string, unknown>>;
+    assert.equal((batch[0]?.body as Record<string, unknown>)?.traceId, 'tr-7');
+  } finally {
+    stub.restore();
+  }
+});
+
 test('routes createDataset to a POST with a JSON body', async () => {
   const stub = withFetch(() => ({ status: 200, body: { id: 'ds-1', name: 'd1' } }));
   try {
