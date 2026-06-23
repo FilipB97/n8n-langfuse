@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.1] - 2026-06-23
+
+### Added
+
+- **`Trace Create` auto-generates a `sessionId` when none is given** (`session-<hex>`), so every trace is grouped into a session and shows up in Langfuse's Sessions view. The id is returned on the output as `sessionId`; pass an explicit, stable `sessionId` to group related traces (e.g. one conversation) instead.
+- **Observation/score `Trace ID` auto-fills from the previous step** (`={{ $json.traceId }}`). Chain `Trace Create → Span/Generation/Score` and the span attaches to the right trace with no manual wiring; clear the field to start a new trace. (`Trace Create`'s own `Trace ID` still defaults to blank = auto-generate.)
+
+### Changed
+
+- **`Observation ID` and `Parent Observation ID` moved out of Advanced Fields** so they're visible by default — `Span Update` / `Generation Update` no longer need Advanced Fields enabled to set the required observation id.
+
+> Note: 1.9.0 (the `sessionId` auto-generation) was prepared but never published to npm; its changes ship here in 1.9.1.
+
 ## [1.8.1] - 2026-06-19
 
 ### Fixed

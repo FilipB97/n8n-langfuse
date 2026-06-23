@@ -6,6 +6,7 @@ import {
   createObservationId,
   createScoreEvent,
   createSdkLogEvent,
+  createSessionId,
   createSpanEvent,
   createSpanUpdateEvent,
   createTraceEvent,
@@ -168,6 +169,8 @@ export function buildEventsForOperation(operation: LangfuseIngestionOperation, p
 export interface IngestionEventSummary {
   /** The trace this batch creates or attaches to (a trace's own id, or the observations' traceId). */
   traceId?: string;
+  /** The session attached to the trace/score (provided or auto-generated). */
+  sessionId?: string;
   /** Every entity id written (observation ids, score id, or the trace id). */
   ids: string[];
   /** The ingestion envelope event ids (useful for idempotency/debugging). */
@@ -206,8 +209,18 @@ export function summarizeIngestionEvents(events: IngestionEvent[]): IngestionEve
     }
   }
 
+  let sessionId: string | undefined;
+  for (const event of events) {
+    const sid = bodyString(event.body, 'sessionId');
+    if (sid !== undefined) {
+      sessionId = sid;
+      break;
+    }
+  }
+
   const summary: IngestionEventSummary = { ids, eventIds };
   if (traceId !== undefined) summary.traceId = traceId;
+  if (sessionId !== undefined) summary.sessionId = sessionId;
   return summary;
 }
 
@@ -227,7 +240,10 @@ function toTraceInput(params: LangfuseOperationParameters): TraceEventInput {
   if (timestamp !== undefined) input.timestamp = timestamp;
   if (name !== undefined) input.name = name;
   if (userId !== undefined) input.userId = userId;
-  if (sessionId !== undefined) input.sessionId = sessionId;
+  // Auto-generate a session id when none is provided so every trace is grouped
+  // into a session and appears in Langfuse's Sessions view. Pass an explicit
+  // (stable) sessionId to group related traces together instead.
+  input.sessionId = sessionId ?? createSessionId();
   if (params.public !== undefined) input.public = params.public;
   const tags = parseTags(params.tags);
   if (tags !== undefined) input.tags = tags;
