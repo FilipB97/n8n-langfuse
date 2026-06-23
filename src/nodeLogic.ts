@@ -165,6 +165,52 @@ export function buildEventsForOperation(operation: LangfuseIngestionOperation, p
   throw new Error(`Unsupported Langfuse ingestion operation: ${operation}`);
 }
 
+export interface IngestionEventSummary {
+  /** The trace this batch creates or attaches to (a trace's own id, or the observations' traceId). */
+  traceId?: string;
+  /** Every entity id written (observation ids, score id, or the trace id). */
+  ids: string[];
+  /** The ingestion envelope event ids (useful for idempotency/debugging). */
+  eventIds: string[];
+}
+
+function bodyString(body: unknown, key: string): string | undefined {
+  if (body && typeof body === 'object') {
+    const value = (body as Record<string, unknown>)[key];
+    if (typeof value === 'string') return value;
+  }
+  return undefined;
+}
+
+/**
+ * Extract the ids actually written by a batch so the node can return them.
+ * Without this, auto-generated trace/observation ids are lost and users can't
+ * reliably attach later spans/scores to the same trace (the #1 cause of
+ * "my span isn't showing inside the trace").
+ */
+export function summarizeIngestionEvents(events: IngestionEvent[]): IngestionEventSummary {
+  const ids = events.map((event) => bodyString(event.body, 'id')).filter((id): id is string => id !== undefined);
+  const eventIds = events.map((event) => event.id);
+
+  // Prefer a trace-create's own id; otherwise the traceId an observation points at.
+  let traceId = events.find((event) => event.type === 'trace-create')
+    ? bodyString(events.find((event) => event.type === 'trace-create')?.body, 'id')
+    : undefined;
+  if (traceId === undefined) {
+    for (const event of events) {
+      const tid = bodyString(event.body, 'traceId');
+      if (tid !== undefined) {
+        traceId = tid;
+        break;
+      }
+    }
+  }
+
+  const summary: IngestionEventSummary = { ids, eventIds };
+  if (traceId !== undefined) summary.traceId = traceId;
+  return summary;
+}
+
 function toTraceInput(params: LangfuseOperationParameters): TraceEventInput {
   const input: TraceEventInput = {};
 

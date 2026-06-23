@@ -7,6 +7,7 @@ import {
 } from '../../src/langfuse.js';
 import {
   buildEventsForOperation,
+  summarizeIngestionEvents,
   type LangfuseOperation,
   type LangfuseOperationParameters,
 } from '../../src/nodeLogic.js';
@@ -338,6 +339,7 @@ async function runExecute(this: LangfuseExecuteContext): Promise<Array<Array<Nod
           throw new Error(`Langfuse returned ${response.errors.length} batch error(s) for operation ${operation}`);
         }
 
+        const summary = summarizeIngestionEvents(events);
         output.push({
           json: {
             resource,
@@ -346,6 +348,12 @@ async function runExecute(this: LangfuseExecuteContext): Promise<Array<Array<Nod
             status: response.status,
             ok: response.ok,
             batchSize: events.length,
+            // Surface the ids actually written so later spans/scores can attach
+            // to the same trace (these reflect what was sent, including any
+            // auto-generated ids).
+            ...(summary.traceId !== undefined ? { traceId: summary.traceId } : {}),
+            ids: summary.ids,
+            eventIds: summary.eventIds,
             successes: response.successes,
             errors: response.errors,
             raw: response.raw,
