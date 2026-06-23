@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.5] - 2026-06-23
+
+### Changed
+
+- **Minimal-by-default field layout.** The ingestion operations now show only the fields you actually type — content (`Name`, `Input`/`Output JSON`, `Model`) and the required score/SDK/batch fields. All the plumbing that the node can fill itself — `Trace ID`, `Observation ID`, `Parent Observation ID`, `Session ID`, `User ID`, and the generation's `Prompt Name`/`Prompt Version` — moved under **Show Advanced Fields**. They are still auto-populated in code from the previous step's output (`traceId`/`observationId`), and `Session ID` still defaults to the trace id, so a `Trace Create → Span Create → Finalize Span` chain works with nothing wired. Reveal Advanced Fields to set any of them explicitly.
+- **`Finalize Span`'s `Observation ID` is no longer a required visible field.** It auto-fills from the previous step's `observationId` (and is available under Advanced Fields when you need to set it explicitly), so the common chained flow needs no input at all.
+
 ## [1.9.4] - 2026-06-23
 
 ### Fixed

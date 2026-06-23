@@ -16,7 +16,10 @@ test('Langfuse node exposes a custom svg icon and grouped resource actions', () 
   assert.equal(nodeDescription.properties[0]?.name, 'resource');
   assert.equal(nodeDescription.properties[1]?.name, 'operation');
   assert.equal(getProperty('showAdvancedFields')?.default, false);
-  assert.deepEqual(getProperty('traceId')?.displayOptions?.show?.showAdvancedFields, undefined);
+  // Content fields (e.g. Name) stay visible by default; plumbing ids (Trace ID)
+  // and other optional fields move under Show Advanced Fields.
+  assert.deepEqual(getProperty('name')?.displayOptions?.show?.showAdvancedFields, undefined);
+  assert.deepEqual(getProperty('traceId')?.displayOptions?.show?.showAdvancedFields, [true]);
   assert.deepEqual(getProperty('eventId')?.displayOptions?.show?.showAdvancedFields, [true]);
 });
 
