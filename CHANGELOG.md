@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **`Observation ID` and `Parent Observation ID` moved out of Advanced Fields** so they're visible by default — `Span Update` / `Generation Update` no longer need Advanced Fields enabled to set the required observation id.
+- **Identity/linking fields moved out of Advanced Fields** so they're visible by default: `Observation ID`, `Parent Observation ID`, and (on Trace Create) `User ID` and `Session ID`. `Span Update` / `Generation Update` no longer need Advanced Fields enabled to set the required observation id. Genuinely optional fields (metadata, tags, version, level, status message, timing, model parameters, etc.) stay under Advanced Fields.
 
 > Note: 1.9.0 (the `sessionId` auto-generation) was prepared but never published to npm; its changes ship here in 1.9.1.
 
