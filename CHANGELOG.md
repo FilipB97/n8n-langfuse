@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.6] - 2026-06-23
+
+### Fixed
+
+- **`Prompt Version` on generations is now sent as a number.** Langfuse's ingestion API rejects `promptVersion` as a string (`expected number, received string`), which made `Finalize Span` / `Generation Create` / `Generation Update` return a `400` for the generation event whenever a prompt version was set. The node now coerces the numeric UI value to a number (a non-numeric value is left as-is).
+
 ## [1.9.5] - 2026-06-23
 
 ### Changed

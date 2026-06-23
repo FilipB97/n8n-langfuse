@@ -358,7 +358,13 @@ function toGenerationInput(params: LangfuseOperationParameters, requireObservati
   }
   if (completionStartTime !== undefined) input.completionStartTime = completionStartTime;
   if (promptName !== undefined) input.promptName = promptName;
-  if (promptVersion !== undefined) input.promptVersion = promptVersion;
+  if (promptVersion !== undefined) {
+    // Langfuse ingestion expects promptVersion as a number; coerce numeric
+    // strings (the UI value is always a string) and fall back to the raw
+    // string only if it isn't numeric.
+    const numericVersion = Number(promptVersion);
+    input.promptVersion = Number.isFinite(numericVersion) && promptVersion !== '' ? numericVersion : promptVersion;
+  }
   if (promptLabels !== undefined) input.promptLabels = promptLabels;
 
   return input;

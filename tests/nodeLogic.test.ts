@@ -97,7 +97,17 @@ test('buildEventsForOperation builds finalize span batches with generation and s
   assert.equal(events[1]?.type, 'span-update');
   assert.equal(events[0]?.body.parentObservationId, 'abcdef1234567890');
   assert.equal(events[0]?.body.promptName, 'answer-query');
+  // Langfuse ingestion expects promptVersion as a number, so the string UI
+  // value is coerced.
+  assert.equal(events[0]?.body.promptVersion, 2);
   assert.equal(events[1]?.body.endTime, '2026-06-02T10:00:02.000Z');
+});
+
+test('generation promptVersion keeps a non-numeric value as a string', () => {
+  const events = buildEventsForOperation('generationCreate', {
+    traceId: 't', observationId: 'g', promptVersion: 'latest',
+  });
+  assert.equal(events[0]?.body.promptVersion, 'latest');
 });
 
 test('buildEventsForOperation requires trace ids and score values for scoreCreate', () => {
