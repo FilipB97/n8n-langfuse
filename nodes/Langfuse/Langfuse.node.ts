@@ -352,6 +352,7 @@ async function runExecute(this: LangfuseExecuteContext): Promise<Array<Array<Nod
             // to the same trace (these reflect what was sent, including any
             // auto-generated ids).
             ...(summary.traceId !== undefined ? { traceId: summary.traceId } : {}),
+            ...(summary.sessionId !== undefined ? { sessionId: summary.sessionId } : {}),
             ids: summary.ids,
             eventIds: summary.eventIds,
             successes: response.successes,

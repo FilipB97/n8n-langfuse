@@ -7,11 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.8.1] - 2026-06-19
+## [1.9.0] - 2026-06-19
+
+### Added
+
+- **`Trace Create` auto-generates a `sessionId` when none is given.** Every trace is now grouped into a session and shows up in Langfuse's Sessions view; the generated id (`session-<hex>`) is returned in the output as `sessionId`. Pass an explicit, stable `sessionId` to group related traces (e.g. one conversation) together instead.
 
 ### Fixed
 
-- **Ingestion output now returns the written ids (`traceId`, `ids`, `eventIds`).** Previously the node never surfaced the trace/observation ids it sent, so when a trace used an auto-generated id you couldn't reliably attach a later span/score to it — the span would create its own trace and appear disconnected. Expressions can now read `{{$json.traceId}}` / `{{$json.ids[0]}}` to chain operations. (Reminder: `sessionId` is a trace-level field — set it on Trace Create, not on a span.)
+- **Ingestion output now returns the written ids (`traceId`, `sessionId`, `ids`, `eventIds`).** Previously the node never surfaced the trace/observation ids it sent, so when a trace used an auto-generated id you couldn't reliably attach a later span/score to it — the span would create its own trace and appear disconnected. Expressions can now read `{{$json.traceId}}` / `{{$json.ids[0]}}` to chain operations. (Spans nest by `traceId`; `sessionId` is a trace-level field — set it on Trace Create, not on a span.)
 
 ## [1.8.0] - 2026-06-19
 

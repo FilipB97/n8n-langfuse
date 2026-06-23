@@ -138,6 +138,23 @@ test('buildPromptRequestParameters allows prompt name only', () => {
   });
 });
 
+test('traceCreate auto-generates a sessionId when none is provided', () => {
+  const events = buildEventsForOperation('traceCreate', { name: 'checkout' });
+  const sessionId = (events[0]?.body as { sessionId?: unknown }).sessionId;
+  assert.match(String(sessionId), /^session-[0-9a-f]{16}$/);
+});
+
+test('traceCreate keeps an explicit sessionId', () => {
+  const events = buildEventsForOperation('traceCreate', { name: 'checkout', sessionId: 'conversation-42' });
+  assert.equal((events[0]?.body as { sessionId?: unknown }).sessionId, 'conversation-42');
+});
+
+test('summarizeIngestionEvents surfaces the (auto-generated) sessionId for traceCreate', () => {
+  const events = buildEventsForOperation('traceCreate', { name: 'checkout' });
+  const summary = summarizeIngestionEvents(events);
+  assert.match(String(summary.sessionId), /^session-/);
+});
+
 test('summarizeIngestionEvents reports the trace id a span attaches to', () => {
   const events = buildEventsForOperation('spanCreate', { traceId: 'trace-123', observationId: 'span-1', name: 'work' });
   const summary = summarizeIngestionEvents(events);
