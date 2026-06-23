@@ -7,6 +7,7 @@ import {
   createScoreEvent,
   createSdkLogEvent,
   createTraceId,
+  currentTimestamp,
   createSpanEvent,
   createSpanUpdateEvent,
   createTraceEvent,
@@ -143,14 +144,28 @@ export function buildEventsForOperation(operation: LangfuseIngestionOperation, p
   switch (operation) {
     case 'traceCreate':
       return [createTraceEvent(toTraceInput(params))];
-    case 'spanCreate':
-      return [createSpanEvent(toObservationInput(params))];
-    case 'spanUpdate':
-      return [createSpanUpdateEvent(toObservationInput(params, true))];
-    case 'generationCreate':
-      return [createGenerationEvent(toGenerationInput(params))];
-    case 'generationUpdate':
-      return [createGenerationUpdateEvent(toGenerationInput(params, true))];
+    case 'spanCreate': {
+      const input = toObservationInput(params);
+      // Default startTime to now so the span has timing and renders in Langfuse.
+      if (input.startTime === undefined) input.startTime = currentTimestamp();
+      return [createSpanEvent(input)];
+    }
+    case 'spanUpdate': {
+      const input = toObservationInput(params, true);
+      // Default endTime to now so an update closes the span.
+      if (input.endTime === undefined) input.endTime = currentTimestamp();
+      return [createSpanUpdateEvent(input)];
+    }
+    case 'generationCreate': {
+      const input = toGenerationInput(params);
+      if (input.startTime === undefined) input.startTime = currentTimestamp();
+      return [createGenerationEvent(input)];
+    }
+    case 'generationUpdate': {
+      const input = toGenerationInput(params, true);
+      if (input.endTime === undefined) input.endTime = currentTimestamp();
+      return [createGenerationUpdateEvent(input)];
+    }
     case 'finalizeSpan':
       return buildFinalizeSpanBatch(params);
     case 'eventCreate':
@@ -171,6 +186,8 @@ export interface IngestionEventSummary {
   traceId?: string;
   /** The session attached to the trace/score (provided or auto-generated). */
   sessionId?: string;
+  /** The primary observation id written (span/generation/event), for chaining updates/finalize. */
+  observationId?: string;
   /** Every entity id written (observation ids, score id, or the trace id). */
   ids: string[];
   /** The ingestion envelope event ids (useful for idempotency/debugging). */
@@ -218,9 +235,22 @@ export function summarizeIngestionEvents(events: IngestionEvent[]): IngestionEve
     }
   }
 
+  const OBSERVATION_TYPES = new Set(['span-create', 'span-update', 'generation-create', 'generation-update', 'event-create']);
+  let observationId: string | undefined;
+  for (const event of events) {
+    if (OBSERVATION_TYPES.has(event.type)) {
+      const oid = bodyString(event.body, 'id');
+      if (oid !== undefined) {
+        observationId = oid;
+        break;
+      }
+    }
+  }
+
   const summary: IngestionEventSummary = { ids, eventIds };
   if (traceId !== undefined) summary.traceId = traceId;
   if (sessionId !== undefined) summary.sessionId = sessionId;
+  if (observationId !== undefined) summary.observationId = observationId;
   return summary;
 }
 
@@ -409,13 +439,15 @@ function buildFinalizeSpanBatch(params: LangfuseOperationParameters): IngestionE
   generationInput.observationId = generationObservationId;
   generationInput.parentObservationId = spanObservationId;
   generationInput.name = asString(params.name) ?? 'llm-response';
+  // Default the generation's startTime so it has timing.
+  if (generationInput.startTime === undefined) generationInput.startTime = currentTimestamp();
 
   const spanUpdateInput = toObservationInput(params, true);
   spanUpdateInput.observationId = spanObservationId;
-  const endTime = asString(params.endTime);
-  if (endTime !== undefined) {
-    spanUpdateInput.endTime = endTime;
-  }
+  // Finalizing only closes the span — don't reset its original startTime.
+  delete spanUpdateInput.startTime;
+  // Default endTime to now when not provided.
+  spanUpdateInput.endTime = asString(params.endTime) ?? currentTimestamp();
 
   const generation = createGenerationEvent(generationInput);
   const spanUpdate = createSpanUpdateEvent(spanUpdateInput);

@@ -127,13 +127,14 @@ See:
 - JSON fields accept either JSON strings or already-parsed objects
 - `Trace Create` auto-generates a trace id when `Trace ID` is left blank
 - `Trace Create` defaults `Session ID` to the trace's own id when left blank (so a single id drives both and the trace always lands in a session); set `Session ID` to override or to group several traces under one session. The id used is returned on the output as `sessionId`
-- Ingestion operations return the ids they wrote (`traceId`, `sessionId`, `ids`, `eventIds`) so later spans/scores can attach to the same trace via expressions
+- Ingestion operations return the ids they wrote (`traceId`, `sessionId`, `observationId`, `ids`, `eventIds`) so later spans/scores/updates can attach via expressions
 - On `Span`/`Generation`/`Event`/`Score` operations the `Trace ID` field **auto-fills from the previous step** (`={{ $json.traceId }}`), so chaining `Trace Create → Span Create` links them with no manual wiring; clear it to start a new trace. If the span runs **several steps later** (not directly after Trace Create), reference the trace node by name instead, e.g. `={{ $('Trace Create').item.json.traceId }}`
 - Identity/linking fields are shown by default (not under Advanced Fields): `Trace ID`, `Observation ID`, `Parent Observation ID`, and `User ID` / `Session ID` on Trace Create. Genuinely optional fields (metadata, tags, version, level, status message, timing, model parameters) stay under Advanced Fields
 - `Span Create`, `Generation Create`, `Event Create`, and `SDK Log Create` auto-generate observation ids when needed
-- `Span Update`, `Generation Update`, and `Finalize Span` require an `Observation ID`
+- `Span Update`, `Generation Update`, and `Finalize Span` require an `Observation ID` (auto-filled from the previous step's `observationId`; `Finalize Span` exposes the full generation field set — model, input/output, usage, etc.)
 - `Score Create` requires a score value plus either a trace id or a session id
 - `timestamp` is generated automatically when missing
+- timing is auto-filled: `Span`/`Generation Create` default `startTime` to now, updates default `endTime` to now, and `Finalize Span` closes the span — so observations always render with timing in Langfuse (set the fields to override)
 - `207 Multi-Status` responses are treated as valid ingestion responses
 - partial ingestion errors are returned in the output and can optionally fail the item
 - failures throw n8n's `NodeApiError` (HTTP errors, carrying status + body) or `NodeOperationError`, with item context; with **Continue On Fail** enabled they are captured on the item instead (`ok: false`, `error`, `status`)

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.3] - 2026-06-23
+
+### Fixed
+
+- **`Finalize Span` now exposes all of its fields.** Previously only a handful were shown, so the operation failed with "observationId is required" and couldn't set the generation's model/input/output/usage. `Finalize Span` now shows `Trace ID` (auto-filled from the previous step), `Observation ID` (the span to finalize, auto-filled from the previous step's `observationId`), `Model`, `Input`/`Output JSON`, `Usage`/`Cost Details`, `Model Parameters`, `Metadata`, and the rest of the generation fields.
+
+### Added
+
+- **Ingestion output now includes `observationId`** (the primary observation id written), so a `Span Create → Finalize Span` / `Span Update` chain auto-fills the span id with no manual wiring.
+- **Automatic timing.** `Span Create` / `Generation Create` default `startTime` to now, `Span Update` / `Generation Update` default `endTime` to now, and `Finalize Span` closes the span (defaults its `endTime`) — so observations always carry timing and render correctly in Langfuse without setting anything. Explicit values still win.
+
 ## [1.9.2] - 2026-06-23
 
 ### Changed
