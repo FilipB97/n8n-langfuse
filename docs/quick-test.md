@@ -53,15 +53,23 @@ Set:
 - `Model`: `gpt-4.1-mini`
 - `Input JSON`: `{"prompt":"Tell me a joke"}`
 - `Output JSON`: `{"response":"Why did the ..."}`
-- `Usage Details JSON`: `{"prompt_tokens":10,"completion_tokens":20}`
-- `Cost Details JSON`: `{"total_cost":0.01}`
+- `Prompt Tokens`: `10`
+- `Completion Tokens`: `20`
+- `Total Tokens`: `30`
+- `Cost Details JSON`: `{"total":0.01}`
 - `Prompt Name`: `answer-query`
 - `Prompt Version`: `2`
 - `Prompt Labels JSON`: `["production"]`
 - `Start Time`: `2026-06-02T10:00:00.000Z`
 - `End Time`: `2026-06-02T10:00:02.000Z`
 
-This sends one batch with `generation-create` and `span-update`.
+This sends one batch with `generation-create` and `span-update`, both pointing at
+the same trace, with the generation nested under `span-001`.
+
+In Langfuse the generation should show `10` input / `20` output tokens and the
+labels under `metadata.prompt_labels`. If the node returns `ok: true` but nothing
+appears, check `errorCount` on the output — a `207` response means only some
+events were stored.
 
 ## 5. Get Prompt
 

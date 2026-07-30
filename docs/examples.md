@@ -94,11 +94,28 @@ The resulting event is `trace-create` with a body containing `id`, `name`, `user
   "name": "openai",
   "model": "gpt-4.1-mini",
   "modelParametersJson": "{\"temperature\":0.2}",
-  "usageDetailsJson": "{\"prompt_tokens\":1,\"completion_tokens\":2}",
-  "costDetailsJson": "{\"total_cost\":0.01}",
+  "promptTokens": "150",
+  "completionTokens": "42",
+  "totalTokens": "192",
+  "costDetailsJson": "{\"input\":0.002,\"output\":0.004}",
   "outputJson": "{\"ok\":true}"
 }
 ```
+
+Instead of the three token fields you can pass `usageDetailsJson` directly — for
+example straight from an LLM node's usage object:
+
+```json
+{
+  "usageDetailsJson": "={{ JSON.stringify($('OpenAI Chat').item.json.usage) }}"
+}
+```
+
+Langfuse counts the `input`, `output`, and `total` keys. The common LLM spellings
+(`prompt_tokens` / `promptTokens`, `completion_tokens` / `completionTokens`,
+`total_tokens` / `totalTokens`) are mapped onto them, and values arriving as
+strings are coerced to numbers, so token counts and costs are recorded either
+way. Any other key is kept as a custom usage dimension.
 
 ### Finalize Span
 
@@ -113,8 +130,10 @@ The resulting event is `trace-create` with a body containing `id`, `name`, `user
   "model": "gpt-4.1-mini",
   "inputJson": "{\"prompt\":\"Tell me a joke\"}",
   "outputJson": "{\"response\":\"Why did the...\"}",
-  "usageDetailsJson": "{\"prompt_tokens\":10,\"completion_tokens\":20}",
-  "costDetailsJson": "{\"total_cost\":0.01}",
+  "promptTokens": "10",
+  "completionTokens": "20",
+  "totalTokens": "30",
+  "costDetailsJson": "{\"total\":0.01}",
   "promptName": "answer-query",
   "promptVersion": "2",
   "promptLabelsJson": "[\"production\"]",
@@ -123,7 +142,10 @@ The resulting event is `trace-create` with a body containing `id`, `name`, `user
 }
 ```
 
-This sends a batch containing `generation-create` and `span-update`.
+This sends a batch containing `generation-create` and `span-update`. Both events
+reference the same `traceId`, the generation is nested under the span
+(`parentObservationId`), and both close at `endTime`. `promptLabelsJson` is
+stored on the generation as `metadata.prompt_labels`.
 
 ### Score Create
 

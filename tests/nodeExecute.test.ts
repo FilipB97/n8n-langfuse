@@ -269,3 +269,49 @@ test('without continueOnFail a failed request rejects', async () => {
     stub.restore();
   }
 });
+
+test('a partial 207 batch failure is surfaced as errorCount instead of looking like a success', async () => {
+  const stub = withFetch(() => ({
+    status: 207,
+    body: { successes: [{ id: 'ok-1' }], errors: [{ id: 'bad-1', status: 400, message: 'invalid usage' }] },
+  }));
+  try {
+    const ctx = makeContext({
+      paramsByIndex: [{ resource: 'generation', operation: 'generationCreate', traceId: 'trace-1', model: 'gpt-4.1-mini' }],
+    });
+    const [items] = await execute(ctx);
+    assert.equal(items?.[0]?.json.errorCount, 1);
+    assert.equal((items?.[0]?.json.errors as unknown[]).length, 1);
+  } finally {
+    stub.restore();
+  }
+});
+
+test('a Span Create → Finalize Span chain keeps both observations in one trace', async () => {
+  const stub = withFetch(() => ({ status: 200, body: { successes: [], errors: [] } }));
+  try {
+    // Span Create with no Trace ID wired anywhere: the node has to mint one.
+    const spanCtx = makeContext({ paramsByIndex: [{ resource: 'span', operation: 'spanCreate', name: 'llm-call' }] });
+    const [spanItems] = await execute(spanCtx);
+    const { traceId, observationId } = spanItems?.[0]?.json as { traceId?: string; observationId?: string };
+    assert.ok(traceId, 'Span Create should report the trace it wrote to');
+    assert.ok(observationId);
+
+    // Finalize Span, wired straight after it, picks both ids off the input item.
+    const finalizeCtx = makeContext({
+      paramsByIndex: [{ resource: 'generation', operation: 'finalizeSpan', model: 'gpt-4.1-mini', promptTokens: '10', completionTokens: '20' }],
+      items: [{ json: { traceId, observationId } }],
+    });
+    const [finalizeItems] = await execute(finalizeCtx);
+    assert.equal((finalizeItems?.[0]?.json as { traceId?: string }).traceId, traceId);
+
+    const batch = (stub.calls[1]?.body as { batch: Array<{ type: string; body: Record<string, unknown> }> }).batch;
+    assert.deepEqual(batch.map((event) => event.type), ['generation-create', 'span-update']);
+    // Both events reference the trace the span was created in.
+    assert.deepEqual(batch.map((event) => event.body.traceId), [traceId, traceId]);
+    assert.equal(batch[0]?.body.parentObservationId, observationId);
+    assert.deepEqual(batch[0]?.body.usageDetails, { input: 10, output: 20 });
+  } finally {
+    stub.restore();
+  }
+});
