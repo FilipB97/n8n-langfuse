@@ -314,7 +314,7 @@ test('loose timestamps are normalized to ISO 8601 instead of being rejected by L
     observationId: 'span-1',
     startTime: '2026-06-02 10:00:00',
   });
-  assert.match(String((events[0]?.body as { startTime?: unknown }).startTime), /^2026-06-02T\d{2}:00:00\.000Z$/);
+  assert.equal((events[0]?.body as { startTime?: unknown }).startTime, new Date('2026-06-02T10:00:00').toISOString());
 
   const epoch = buildEventsForOperation('spanUpdate', {
     observationId: 'span-1',
@@ -346,11 +346,13 @@ test('blank optional fields are omitted instead of writing empty values', () => 
     version: '', level: '', statusMessage: '', model: '',
   };
 
-  assert.deepEqual(buildEventsForOperation('traceCreate', blank)[0]?.body, {
-    id: 'trace-1',
-    timestamp: (buildEventsForOperation('traceCreate', blank)[0]?.body as { timestamp: string }).timestamp,
-    sessionId: 'trace-1',
-  });
+  // Assert the key set rather than deep-equalling against a second call: the
+  // generated timestamp differs between invocations whenever the clock ticks.
+  const trace = buildEventsForOperation('traceCreate', blank)[0]?.body as Record<string, unknown>;
+  assert.deepEqual(Object.keys(trace).sort(), ['id', 'sessionId', 'timestamp']);
+  assert.equal(trace.id, 'trace-1');
+  assert.equal(trace.sessionId, 'trace-1');
+  assert.match(String(trace.timestamp), /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
 
   const generation = buildEventsForOperation('finalizeSpan', blank)[0]?.body as Record<string, unknown>;
   for (const key of ['input', 'output', 'metadata', 'modelParameters', 'usageDetails', 'costDetails']) {
