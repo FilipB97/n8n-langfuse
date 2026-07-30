@@ -1,4 +1,4 @@
-import { asString, buildBasicAuthHeader, LangfuseRequestError, normalizeBaseUrl, parseJsonMaybe, withRetry } from './langfuse.js';
+import { asString, buildBasicAuthHeader, describeLangfuseError, LangfuseRequestError, normalizeBaseUrl, parseJsonMaybe, withRetry } from './langfuse.js';
 
 export type LangfusePublicApiMethod = 'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -620,7 +620,7 @@ export async function requestLangfusePublicApi(options: LangfusePublicApiRequest
 
     if (!response.ok) {
       throw new LangfuseRequestError(
-        `Langfuse public API request failed with status ${response.status}`,
+        describeLangfuseError('Langfuse public API request failed', response.status, raw),
         response.status,
         raw,
       );

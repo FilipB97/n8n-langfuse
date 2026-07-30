@@ -317,6 +317,48 @@ export function normalizeCostDetails(value: unknown): Record<string, number> | u
   return normalizeNumericDetails(value, COST_KEY_ALIASES);
 }
 
+function truncate(value: string, max = 300): string {
+  return value.length > max ? `${value.slice(0, max)}…` : value;
+}
+
+function extractErrorDetail(body: unknown): string | undefined {
+  if (typeof body === 'string') {
+    return asString(body);
+  }
+
+  if (!body || typeof body !== 'object') {
+    return undefined;
+  }
+
+  const record = body as Record<string, unknown>;
+  const parts: string[] = [];
+  for (const key of ['message', 'error']) {
+    const value = record[key];
+    if (value === undefined || value === null) {
+      continue;
+    }
+
+    // Validation failures come back as a nested object/array of issues, which is
+    // exactly the part the user needs to see.
+    const text = typeof value === 'string' ? asString(value) : truncate(JSON.stringify(value));
+    if (text !== undefined && !parts.includes(text)) {
+      parts.push(text);
+    }
+  }
+
+  return parts.length > 0 ? parts.join(' — ') : undefined;
+}
+
+/**
+ * Build an error message that carries Langfuse's own explanation, mirroring the
+ * Make.com base config's `[{{statusCode}}] {{body.error}}`. Without the detail a
+ * failure surfaces as a bare "status 400" and gives no clue what to fix.
+ */
+export function describeLangfuseError(context: string, status: number, body: unknown): string {
+  const detail = extractErrorDetail(body);
+  return detail === undefined ? `${context} [${status}]` : `${context} [${status}]: ${detail}`;
+}
+
 export function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.trim().replace(/\/+$/u, '');
 }
@@ -738,7 +780,7 @@ export async function sendLangfuseIngestion(options: LangfuseTransportOptions): 
 
     if (!response.ok && response.status !== 207) {
       throw new LangfuseRequestError(
-        `Langfuse ingestion failed with status ${response.status}`,
+        describeLangfuseError('Langfuse ingestion failed', response.status, raw),
         response.status,
         raw,
       );
@@ -810,7 +852,7 @@ export async function fetchLangfusePrompt(options: LangfusePromptRequestOptions)
 
     if (!response.ok) {
       throw new LangfuseRequestError(
-        `Langfuse prompt fetch failed with status ${response.status}`,
+        describeLangfuseError('Langfuse prompt fetch failed', response.status, raw),
         response.status,
         raw,
       );

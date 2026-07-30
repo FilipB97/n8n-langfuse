@@ -22,6 +22,8 @@ All ingestion create operations (`Trace Create`, `Span Create`, `Generation Crea
 - `Base URL` from the credential is normalized by removing a trailing slash
 - requests always go to `/api/public/ingestion`
 - authentication uses Basic Auth with `publicKey` and `secretKey`
+- fields left blank are omitted from the payload rather than sent as `""` / `null` / `[]`
+- errors carry Langfuse's own explanation, e.g. `Langfuse ingestion failed [400]: Invalid request data — [{"path":["usageDetails","input"],"message":"Expected number, received string"}]`
 - `207 Multi-Status` is accepted
 - `errors` are included in the node output, alongside an `errorCount` — a `207` means only *some* events were stored, so check it (or enable `Fail On Batch Errors`) when data is missing in Langfuse
 - missing `timestamp` generates an ISO timestamp in the node; a supplied one also becomes the observation's `startTime`/`endTime` when those are left blank

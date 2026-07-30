@@ -124,7 +124,7 @@ See:
 
 ## Supported Behavior
 
-- JSON fields accept either JSON strings or already-parsed objects
+- JSON fields accept either JSON strings or already-parsed objects; a field left blank is omitted from the payload rather than sent as an empty value
 - `Trace Create` auto-generates a trace id when `Trace ID` is left blank
 - `Trace Create` defaults `Session ID` to the trace's own id when left blank (so a single id drives both and the trace always lands in a session); set `Session ID` to override or to group several traces under one session. The id used is returned on the output as `sessionId`
 - Ingestion operations return the ids they wrote (`traceId`, `sessionId`, `observationId`, `ids`, `eventIds`) so later spans/scores/updates can attach via expressions
@@ -141,6 +141,7 @@ See:
 - `Prompt Labels JSON` is stored on the generation as `metadata.prompt_labels` (Langfuse's ingestion API has no top-level labels field)
 - `207 Multi-Status` responses are treated as valid ingestion responses
 - partial ingestion errors are returned in the output as `errors` plus an `errorCount`, and can optionally fail the item (**Fail On Batch Errors**) — worth checking when a call reports `ok: true` but nothing shows up in Langfuse
+- failures carry Langfuse's own explanation, e.g. `Langfuse ingestion failed [400]: Invalid request data — [{"path":["usageDetails","input"],"message":"Expected number, received string"}]`, so a rejected field names itself
 - failures throw n8n's `NodeApiError` (HTTP errors, carrying status + body) or `NodeOperationError`, with item context; with **Continue On Fail** enabled they are captured on the item instead (`ok: false`, `error`, `status`)
 
 ## Build and Test

@@ -13,6 +13,7 @@ import {
   createTraceEvent,
   createTraceId,
   createObservationId,
+  describeLangfuseError,
   fetchLangfusePrompt,
   LangfuseRequestError,
   normalizeBaseUrl,
@@ -286,4 +287,49 @@ test('normalizeUsageDetails skips non-numeric values Langfuse would reject', () 
   assert.equal(normalizeUsageDetails('{}'), undefined);
   assert.equal(normalizeUsageDetails('not json'), undefined);
   assert.deepEqual(normalizeCostDetails('{"total_cost":0.01}'), { total: 0.01 });
+});
+
+test('describeLangfuseError carries the API explanation, like Make\'s [statusCode] body.error', () => {
+  assert.equal(
+    describeLangfuseError('Langfuse ingestion failed', 401, { message: 'Unauthorized' }),
+    'Langfuse ingestion failed [401]: Unauthorized',
+  );
+  assert.equal(
+    describeLangfuseError('Langfuse ingestion failed', 400, { error: 'Invalid public key' }),
+    'Langfuse ingestion failed [400]: Invalid public key',
+  );
+  // A validation failure names the offending field instead of a bare status.
+  assert.match(
+    describeLangfuseError('Langfuse ingestion failed', 400, {
+      message: 'Invalid request data',
+      error: [{ path: ['usageDetails', 'input'], message: 'Expected number, received string' }],
+    }),
+    /Invalid request data — .*Expected number, received string/,
+  );
+  assert.equal(describeLangfuseError('Langfuse ingestion failed', 500, {}), 'Langfuse ingestion failed [500]');
+  assert.equal(describeLangfuseError('Langfuse ingestion failed', 502, 'Bad Gateway'), 'Langfuse ingestion failed [502]: Bad Gateway');
+});
+
+test('a failed ingestion surfaces the response detail on the thrown error', async () => {
+  const failing: typeof fetch = (async () =>
+    new Response(JSON.stringify({ message: 'Invalid request data' }), {
+      status: 400,
+      headers: { 'content-type': 'application/json' },
+    })) as typeof fetch;
+
+  await assert.rejects(
+    () => sendLangfuseIngestion({
+      baseUrl: 'https://cloud.langfuse.com',
+      publicKey: 'pk-test',
+      secretKey: 'sk-test',
+      batch: [createTraceEvent({ traceId: '1234567890abcdef1234567890abcdef' })],
+      fetchImpl: failing,
+    }),
+    (error: unknown) => {
+      assert.ok(error instanceof LangfuseRequestError);
+      assert.equal(error.status, 400);
+      assert.match(error.message, /\[400\]: Invalid request data/);
+      return true;
+    },
+  );
 });
