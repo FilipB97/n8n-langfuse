@@ -126,6 +126,12 @@ function buildIngestionParameters(context: LangfuseExecuteContext, itemIndex: nu
   params.modelParametersJson = getOptionalNodeParameter(context, 'modelParametersJson', itemIndex);
   params.usageDetailsJson = getOptionalNodeParameter(context, 'usageDetailsJson', itemIndex);
   params.costDetailsJson = getOptionalNodeParameter(context, 'costDetailsJson', itemIndex);
+  const promptTokens = asString(getOptionalNodeParameter(context, 'promptTokens', itemIndex));
+  const completionTokens = asString(getOptionalNodeParameter(context, 'completionTokens', itemIndex));
+  const totalTokens = asString(getOptionalNodeParameter(context, 'totalTokens', itemIndex));
+  if (promptTokens !== undefined) params.promptTokens = promptTokens;
+  if (completionTokens !== undefined) params.completionTokens = completionTokens;
+  if (totalTokens !== undefined) params.totalTokens = totalTokens;
   if (completionStartTime !== undefined) params.completionStartTime = completionStartTime;
   if (promptName !== undefined) params.promptName = promptName;
   if (promptVersion !== undefined) params.promptVersion = promptVersion;
@@ -373,6 +379,10 @@ async function runExecute(this: LangfuseExecuteContext): Promise<Array<Array<Nod
             ids: summary.ids,
             eventIds: summary.eventIds,
             successes: response.successes,
+            // Langfuse answers 207 when only some events were accepted, so a
+            // rejected event otherwise looks like a success. Surface the count
+            // to make partial failures visible without inspecting `errors`.
+            errorCount: response.errors.length,
             errors: response.errors,
             raw: response.raw,
           },
@@ -599,9 +609,17 @@ const v1Description: NodeDescription = {
     { displayName: 'Prompt Label', name: 'promptLabel', type: 'string', default: '', placeholder: 'production', description: 'Optional prompt label query parameter', displayOptions: showPublicApi('getPrompt') },
     { displayName: 'Prompt Version', name: 'promptVersion', type: 'string', default: '', description: 'Optional prompt version linked to the generation', displayOptions: showIngestionAdvanced('generationCreate', 'generationUpdate', 'finalizeSpan') },
     { displayName: 'Prompt Version', name: 'promptVersion', type: 'string', default: '', description: 'Optional prompt version query parameter', displayOptions: showPublicApi('getPrompt') },
-    { displayName: 'Prompt Labels JSON', name: 'promptLabelsJson', type: 'string', default: '', placeholder: '["production"]', description: 'JSON array of prompt labels stored with the generation', displayOptions: showIngestion('generationCreate', 'generationUpdate', 'finalizeSpan') },
-    { displayName: 'Usage Details JSON', name: 'usageDetailsJson', type: 'string', default: '', placeholder: '{"prompt_tokens":1,"completion_tokens":2}', description: 'JSON usage breakdown stored with the generation', displayOptions: showIngestion('generationCreate', 'finalizeSpan', 'generationUpdate') },
-    { displayName: 'Cost Details JSON', name: 'costDetailsJson', type: 'string', default: '', placeholder: '{"total_cost":0.01}', description: 'JSON cost breakdown stored with the generation', displayOptions: showIngestion('generationCreate', 'finalizeSpan', 'generationUpdate') },
+    { displayName: 'Prompt Labels JSON', name: 'promptLabelsJson', type: 'string', default: '', placeholder: '["production"]', description: 'JSON array of prompt labels, stored on the generation as metadata prompt_labels', displayOptions: showIngestion('generationCreate', 'generationUpdate', 'finalizeSpan') },
+    // These are token *counts*, not credentials — the lint rule treats every
+    // parameter named "*Token*" as sensitive, and masking them would hide the
+    // value the user needs to see.
+    /* eslint-disable n8n-nodes-base/node-param-type-options-password-missing */
+    { displayName: 'Prompt Tokens', name: 'promptTokens', type: 'string', default: '', placeholder: '150', description: 'Input token count for the generation, recorded as usage input. Leave blank if unknown.', displayOptions: showIngestionBasic('generationCreate', 'finalizeSpan', 'generationUpdate') },
+    { displayName: 'Completion Tokens', name: 'completionTokens', type: 'string', default: '', placeholder: '42', description: 'Output token count for the generation, recorded as usage output. Leave blank if unknown.', displayOptions: showIngestionBasic('generationCreate', 'finalizeSpan', 'generationUpdate') },
+    { displayName: 'Total Tokens', name: 'totalTokens', type: 'string', default: '', placeholder: '192', description: 'Total token count for the generation, recorded as usage total. Leave blank if unknown.', displayOptions: showIngestionBasic('generationCreate', 'finalizeSpan', 'generationUpdate') },
+    /* eslint-enable n8n-nodes-base/node-param-type-options-password-missing */
+    { displayName: 'Usage Details JSON', name: 'usageDetailsJson', type: 'string', default: '', placeholder: '{"input":150,"output":42,"total":192}', description: 'JSON usage breakdown stored with the generation. Langfuse counts the input, output, and total keys; prompt_tokens, completion_tokens, and total_tokens are mapped onto them. Overrides the token fields above.', displayOptions: showIngestion('generationCreate', 'finalizeSpan', 'generationUpdate') },
+    { displayName: 'Cost Details JSON', name: 'costDetailsJson', type: 'string', default: '', placeholder: '{"input":0.002,"output":0.004,"total":0.006}', description: 'JSON cost breakdown stored with the generation, keyed by input, output, and total. The input_cost, output_cost, and total_cost spellings are mapped onto them.', displayOptions: showIngestion('generationCreate', 'finalizeSpan', 'generationUpdate') },
     { displayName: 'Completion Start Time', name: 'completionStartTime', type: 'string', default: '', description: 'Optional completion start time for the generation', displayOptions: showIngestion('generationCreate', 'finalizeSpan', 'generationUpdate') },
     { displayName: 'Score ID', name: 'scoreId', type: 'string', default: '', description: 'Optional score ID for idempotent create/update behavior', displayOptions: showIngestion('scoreCreate') },
     { displayName: 'Score ID', name: 'scoreId', type: 'string', default: '', description: 'Score ID to fetch or delete', displayOptions: showPublicApiBasic('getScore', 'deleteScore') },
@@ -874,9 +892,15 @@ const v2Description: NodeDescription = {
     { displayName: 'Tags', name: 'promptTags', type: 'string', default: '', placeholder: 'support,faq', description: 'Comma-separated tags or a JSON array', displayOptions: v2Adv('createPrompt') },
     { displayName: 'Config JSON', name: 'promptConfigJson', type: 'string', default: '', placeholder: '{"model":"gpt-4o-mini","temperature":0}', description: 'Optional JSON config stored with the prompt, such as model and parameters', displayOptions: v2Adv('createPrompt') },
     { displayName: 'Commit Message', name: 'promptCommitMessage', type: 'string', default: '', description: 'Optional commit message describing this prompt version', displayOptions: v2Adv('createPrompt') },
-    { displayName: 'Prompt Labels JSON', name: 'promptLabelsJson', type: 'string', default: '', placeholder: '["production"]', description: 'JSON array of prompt labels stored with the generation', displayOptions: v2Adv('generationCreate', 'generationUpdate', 'finalizeSpan') },
-    { displayName: 'Usage Details JSON', name: 'usageDetailsJson', type: 'string', default: '', placeholder: '{"prompt_tokens":1,"completion_tokens":2}', description: 'JSON usage breakdown stored with the generation', displayOptions: v2Adv('generationCreate', 'finalizeSpan', 'generationUpdate') },
-    { displayName: 'Cost Details JSON', name: 'costDetailsJson', type: 'string', default: '', placeholder: '{"total_cost":0.01}', description: 'JSON cost breakdown stored with the generation', displayOptions: v2Adv('generationCreate', 'finalizeSpan', 'generationUpdate') },
+    { displayName: 'Prompt Labels JSON', name: 'promptLabelsJson', type: 'string', default: '', placeholder: '["production"]', description: 'JSON array of prompt labels, stored on the generation as metadata prompt_labels', displayOptions: v2Adv('generationCreate', 'generationUpdate', 'finalizeSpan') },
+    // Token counts, not credentials — see the note on the v1 properties.
+    /* eslint-disable n8n-nodes-base/node-param-type-options-password-missing */
+    { displayName: 'Prompt Tokens', name: 'promptTokens', type: 'string', default: '', placeholder: '150', description: 'Input token count for the generation, recorded as usage input. Leave blank if unknown.', displayOptions: v2Basic('generationCreate', 'finalizeSpan', 'generationUpdate') },
+    { displayName: 'Completion Tokens', name: 'completionTokens', type: 'string', default: '', placeholder: '42', description: 'Output token count for the generation, recorded as usage output. Leave blank if unknown.', displayOptions: v2Basic('generationCreate', 'finalizeSpan', 'generationUpdate') },
+    { displayName: 'Total Tokens', name: 'totalTokens', type: 'string', default: '', placeholder: '192', description: 'Total token count for the generation, recorded as usage total. Leave blank if unknown.', displayOptions: v2Basic('generationCreate', 'finalizeSpan', 'generationUpdate') },
+    /* eslint-enable n8n-nodes-base/node-param-type-options-password-missing */
+    { displayName: 'Usage Details JSON', name: 'usageDetailsJson', type: 'string', default: '', placeholder: '{"input":150,"output":42,"total":192}', description: 'JSON usage breakdown stored with the generation. Langfuse counts the input, output, and total keys; prompt_tokens, completion_tokens, and total_tokens are mapped onto them. Overrides the token fields above.', displayOptions: v2Adv('generationCreate', 'finalizeSpan', 'generationUpdate') },
+    { displayName: 'Cost Details JSON', name: 'costDetailsJson', type: 'string', default: '', placeholder: '{"input":0.002,"output":0.004,"total":0.006}', description: 'JSON cost breakdown stored with the generation, keyed by input, output, and total. The input_cost, output_cost, and total_cost spellings are mapped onto them.', displayOptions: v2Adv('generationCreate', 'finalizeSpan', 'generationUpdate') },
     { displayName: 'Completion Start Time', name: 'completionStartTime', type: 'string', default: '', description: 'Optional completion start time for the generation', displayOptions: v2Adv('generationCreate', 'finalizeSpan', 'generationUpdate') },
     { displayName: 'Score ID', name: 'scoreId', type: 'string', default: '', description: 'Optional score ID for idempotent create/update behavior', displayOptions: v2Adv('scoreCreate') },
     { displayName: 'Score ID', name: 'scoreId', type: 'string', default: '', description: 'Score ID to fetch or delete', displayOptions: v2Basic('getScore', 'deleteScore') },

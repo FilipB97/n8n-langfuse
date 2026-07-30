@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Observations no longer scatter across separate traces.** `Span Create` / `Generation Create` / `Event Create` left `traceId` off the payload when the field was blank, so Langfuse minted a trace id server-side that the node never saw. The output carried no `traceId`, so the next step could not attach to it — a `Span Create → Finalize Span` chain wrote the span to one trace and its generation to another. The node now pins a `traceId` itself (minting one only when there is nothing to inherit) and reports it back. Updates deliberately do **not** mint one, since inventing an id would re-point an existing observation.
+- **`Finalize Span` sends both of its events to the same trace.** The `generation-create` and `span-update` in the batch resolved their `traceId` independently. They now share one, and the generation closes at the span's `endTime` so Langfuse shows a duration for it instead of an open-ended observation.
+- **`Prompt Labels JSON` no longer disappears.** Langfuse's ingestion API has no top-level `promptLabels` field, so the value was silently stripped. Labels are now stored on the generation as `metadata.prompt_labels` (matching the Make.com blueprint), merged with any other `Metadata JSON`.
+- **Token counts and costs are recorded instead of silently dropped.** Langfuse only counts usage keyed by usage type (`input` / `output` / `total`) and rejects non-numeric values — which failed the generation event *inside* a `207` batch, leaving `ok: true` and nothing in Langfuse. `Usage Details JSON` / `Cost Details JSON` now map the common LLM spellings (`prompt_tokens`, `promptTokens`, `completion_tokens`, `total_tokens`, `total_cost`, …) onto those buckets and coerce string values to numbers, so mapping an LLM node's `usage` object straight in works.
+- **`trace-create` sends `timestamp` in the trace body**, not only on the ingestion envelope.
+- **Loose timestamps are accepted.** `Timestamp`, `Start Time`, `End Time`, and `Completion Start Time` are normalized to ISO 8601 with milliseconds, so `Date` values, epoch seconds/milliseconds (e.g. `{{ $now.toMillis() }}`), and strings like `2026-06-02 10:00:00` no longer fail validation. Unparseable values are still passed through unchanged.
+- **An explicit `Timestamp` now drives the observation's timing too.** It previously labelled only the envelope while `startTime`/`endTime` silently fell back to "now", which is why a span could report a start time hours away from its own timestamp.
+
+### Added
+
+- **`Prompt Tokens`, `Completion Tokens`, and `Total Tokens` fields** on `Generation Create` / `Generation Update` / `Finalize Span`, mirroring the Make.com module's parameters — no hand-written `Usage Details JSON` needed. They map to Langfuse's `input` / `output` / `total` usage buckets; an explicit `Usage Details JSON` still wins.
+- **`errorCount` on the ingestion output.** Langfuse answers `207 Multi-Status` when only some events were accepted, which otherwise reads as a success. The count makes partial failures visible without inspecting `errors` (`Fail On Batch Errors` still turns them into a hard failure).
+
 ## [1.9.6] - 2026-06-23
 
 ### Fixed

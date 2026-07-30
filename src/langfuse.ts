@@ -164,6 +164,159 @@ export function asString(value: unknown): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
+/**
+ * Coerce a UI value to a finite number. The node's fields are all strings, so
+ * token counts and costs arrive as `"150"` — and Langfuse's ingestion schema
+ * types usage/cost values as numbers, rejecting the string form.
+ */
+export function asNumber(value: unknown): number | undefined {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : undefined;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return undefined;
+    }
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  return undefined;
+}
+
+function fromEpoch(value: number): string | undefined {
+  if (!Number.isFinite(value)) {
+    return undefined;
+  }
+
+  // Below ~1e11 the value is seconds — any millisecond epoch after 1973 is larger.
+  const millis = Math.abs(value) < 1e11 ? value * 1000 : value;
+  const date = new Date(millis);
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+}
+
+/**
+ * Normalize a timestamp to ISO 8601 with milliseconds — the format Langfuse
+ * expects, and what the Make.com blueprint produces with
+ * `formatDate(date, 'YYYY-MM-DDTHH:mm:ss.SSSZ')`.
+ *
+ * Accepts a `Date`, epoch seconds/milliseconds (number or numeric string, e.g.
+ * `{{ $now.toMillis() }}`), and loose date strings such as
+ * `2026-06-02 10:00:00`. A value that can't be parsed is passed through
+ * unchanged rather than dropped, so an explicit value still reaches the API.
+ */
+export function normalizeTimestamp(value: unknown): string | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? undefined : value.toISOString();
+  }
+
+  if (typeof value === 'number') {
+    return fromEpoch(value);
+  }
+
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  if (/^\d{10,13}$/u.test(trimmed)) {
+    const epoch = fromEpoch(Number(trimmed));
+    if (epoch !== undefined) {
+      return epoch;
+    }
+  }
+
+  // Only parse things that actually look like a date, so a stray value is
+  // passed through instead of being reinterpreted by `new Date`.
+  if (/\d{4}-\d{2}-\d{2}/u.test(trimmed)) {
+    // A space instead of the ISO "T" separator is the common n8n/SQL form.
+    for (const candidate of [trimmed, trimmed.replace(' ', 'T')]) {
+      const parsed = new Date(candidate);
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed.toISOString();
+      }
+    }
+  }
+
+  return trimmed;
+}
+
+// Langfuse buckets token usage under `input` / `output` / `total`; anything else
+// is stored as a custom usage dimension and never counted as tokens (or priced).
+// These are the spellings an LLM node's `usage` object realistically carries.
+const USAGE_KEY_ALIASES: Record<string, string> = {
+  prompttokens: 'input',
+  prompt_tokens: 'input',
+  inputtokens: 'input',
+  input_tokens: 'input',
+  completiontokens: 'output',
+  completion_tokens: 'output',
+  outputtokens: 'output',
+  output_tokens: 'output',
+  totaltokens: 'total',
+  total_tokens: 'total',
+};
+
+const COST_KEY_ALIASES: Record<string, string> = {
+  ...USAGE_KEY_ALIASES,
+  inputcost: 'input',
+  input_cost: 'input',
+  promptcost: 'input',
+  prompt_cost: 'input',
+  outputcost: 'output',
+  output_cost: 'output',
+  completioncost: 'output',
+  completion_cost: 'output',
+  totalcost: 'total',
+  total_cost: 'total',
+  cost: 'total',
+};
+
+function normalizeNumericDetails(value: unknown, aliases: Record<string, string>): Record<string, number> | undefined {
+  const parsed = parseJsonMaybe(value);
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return undefined;
+  }
+
+  const details: Record<string, number> = {};
+  for (const [key, raw] of Object.entries(parsed as Record<string, unknown>)) {
+    const numeric = asNumber(raw);
+    if (numeric === undefined) {
+      // Langfuse rejects non-numeric usage/cost values, which fails the whole
+      // event inside the 207 batch. Skipping keeps the observation itself.
+      continue;
+    }
+
+    const mapped = aliases[key.trim().toLowerCase()] ?? key;
+    // A canonical key always wins over an alias pointing at the same bucket.
+    if (mapped === key || details[mapped] === undefined) {
+      details[mapped] = numeric;
+    }
+  }
+
+  return Object.keys(details).length > 0 ? details : undefined;
+}
+
+/** Map token-usage aliases onto Langfuse's `input`/`output`/`total` buckets and coerce values to numbers. */
+export function normalizeUsageDetails(value: unknown): Record<string, number> | undefined {
+  return normalizeNumericDetails(value, USAGE_KEY_ALIASES);
+}
+
+/** Map cost aliases onto Langfuse's `input`/`output`/`total` buckets and coerce values to numbers. */
+export function normalizeCostDetails(value: unknown): Record<string, number> | undefined {
+  return normalizeNumericDetails(value, COST_KEY_ALIASES);
+}
+
 export function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.trim().replace(/\/+$/u, '');
 }
@@ -254,7 +407,7 @@ export function buildBatchRequestBody(batch: IngestionEvent[]): LangfuseBatchReq
 }
 
 function ensureTimestamp(timestamp?: string): string {
-  return timestamp ?? currentTimestamp();
+  return normalizeTimestamp(timestamp) ?? currentTimestamp();
 }
 
 function ensureTraceId(traceId?: string): string {
@@ -307,8 +460,12 @@ function normalizeJsonObject(value: unknown): JsonObject | undefined {
 
 export function createTraceEvent(input: TraceEventInput): IngestionEvent {
   const traceId = ensureTraceId(input.traceId);
+  const timestamp = ensureTimestamp(input.timestamp);
   const body: JsonObject = {
     id: traceId,
+    // `timestamp` is a real field on Langfuse's trace body (not just the
+    // ingestion envelope) and drives when the trace is shown as having started.
+    timestamp,
   };
 
   if (input.name !== undefined) body.name = input.name;
@@ -325,7 +482,7 @@ export function createTraceEvent(input: TraceEventInput): IngestionEvent {
   return {
     id: ensureEventId(input.eventId),
     type: 'trace-create',
-    timestamp: ensureTimestamp(input.timestamp),
+    timestamp,
     body,
   };
 }
@@ -335,11 +492,14 @@ export function createSpanEvent(input: ObservationEventInput): IngestionEvent {
     id: ensureObservationId(input.observationId),
   };
 
+  const startTime = normalizeTimestamp(input.startTime);
+  const endTime = normalizeTimestamp(input.endTime);
+
   if (input.traceId !== undefined) body.traceId = ensureTraceId(input.traceId);
   if (input.parentObservationId !== undefined) body.parentObservationId = input.parentObservationId;
   if (input.name !== undefined) body.name = input.name;
-  if (input.startTime !== undefined) body.startTime = input.startTime;
-  if (input.endTime !== undefined) body.endTime = input.endTime;
+  if (startTime !== undefined) body.startTime = startTime;
+  if (endTime !== undefined) body.endTime = endTime;
   if (input.input !== undefined) body.input = normalizeJsonValue(input.input) ?? null;
   if (input.output !== undefined) body.output = normalizeJsonValue(input.output) ?? null;
   if (input.metadata !== undefined) body.metadata = normalizeJsonValue(input.metadata) ?? null;
@@ -364,31 +524,63 @@ export function createSpanUpdateEvent(input: ObservationEventInput): IngestionEv
   };
 }
 
+/**
+ * Langfuse's ingestion API has no top-level `promptLabels` field — unknown keys
+ * are stripped, so labels sent there vanish silently. They ride along in
+ * metadata under `prompt_labels`, which is what the Make.com blueprint sends.
+ */
+function withPromptLabels(metadata: unknown, promptLabels: unknown): JsonValue | undefined {
+  const labels = promptLabels === undefined ? undefined : normalizeJsonValue(promptLabels) ?? null;
+  const resolvedMetadata = metadata === undefined ? undefined : normalizeJsonValue(metadata) ?? null;
+
+  if (labels === undefined) {
+    return resolvedMetadata;
+  }
+
+  if (resolvedMetadata === undefined) {
+    return { prompt_labels: labels };
+  }
+
+  if (resolvedMetadata !== null && typeof resolvedMetadata === 'object' && !Array.isArray(resolvedMetadata)) {
+    return { ...(resolvedMetadata as JsonObject), prompt_labels: labels };
+  }
+
+  // Non-object metadata can't be merged into, so keep it under its own key
+  // rather than dropping either value.
+  return { metadata: resolvedMetadata, prompt_labels: labels };
+}
+
 export function createGenerationEvent(input: GenerationEventInput): IngestionEvent {
   const body: JsonObject = {
     id: ensureObservationId(input.observationId),
   };
 
+  const startTime = normalizeTimestamp(input.startTime);
+  const endTime = normalizeTimestamp(input.endTime);
+  const completionStartTime = normalizeTimestamp(input.completionStartTime);
+  const metadata = withPromptLabels(input.metadata, input.promptLabels);
+
   if (input.traceId !== undefined) body.traceId = ensureTraceId(input.traceId);
   if (input.parentObservationId !== undefined) body.parentObservationId = input.parentObservationId;
   if (input.name !== undefined) body.name = input.name;
-  if (input.startTime !== undefined) body.startTime = input.startTime;
+  if (startTime !== undefined) body.startTime = startTime;
   if (input.input !== undefined) body.input = normalizeJsonValue(input.input) ?? null;
   if (input.output !== undefined) body.output = normalizeJsonValue(input.output) ?? null;
-  if (input.metadata !== undefined) body.metadata = normalizeJsonValue(input.metadata) ?? null;
+  if (metadata !== undefined) body.metadata = metadata;
   if (input.version !== undefined) body.version = input.version;
   if (input.level !== undefined) body.level = input.level;
   if (input.statusMessage !== undefined) body.statusMessage = input.statusMessage;
-  if (input.completionStartTime !== undefined) body.completionStartTime = input.completionStartTime;
+  if (completionStartTime !== undefined) body.completionStartTime = completionStartTime;
   if (input.model !== undefined) body.model = input.model;
   if (input.modelParameters !== undefined) body.modelParameters = normalizeJsonObject(input.modelParameters) ?? null;
-  if (input.usageDetails !== undefined) body.usageDetails = normalizeJsonObject(input.usageDetails) ?? null;
-  if (input.costDetails !== undefined) body.costDetails = normalizeJsonObject(input.costDetails) ?? null;
+  // Usage/cost values must be numbers keyed by usage type, so normalize both
+  // rather than passing the raw JSON through.
+  if (input.usageDetails !== undefined) body.usageDetails = normalizeUsageDetails(input.usageDetails) ?? null;
+  if (input.costDetails !== undefined) body.costDetails = normalizeCostDetails(input.costDetails) ?? null;
   if (input.prompt !== undefined) body.prompt = normalizeJsonValue(input.prompt) ?? null;
   if (input.promptName !== undefined) body.promptName = input.promptName;
   if (input.promptVersion !== undefined) body.promptVersion = input.promptVersion;
-  if (input.promptLabels !== undefined) body.promptLabels = normalizeJsonValue(input.promptLabels) ?? null;
-  if (input.endTime !== undefined) body.endTime = input.endTime;
+  if (endTime !== undefined) body.endTime = endTime;
   if (input.environment !== undefined) body.environment = input.environment;
 
   return {
@@ -412,10 +604,14 @@ export function createEventEvent(input: ObservationEventInput): IngestionEvent {
     id: ensureObservationId(input.observationId),
   };
 
+  const startTime = normalizeTimestamp(input.startTime);
+  const endTime = normalizeTimestamp(input.endTime);
+
   if (input.traceId !== undefined) body.traceId = ensureTraceId(input.traceId);
   if (input.parentObservationId !== undefined) body.parentObservationId = input.parentObservationId;
   if (input.name !== undefined) body.name = input.name;
-  if (input.endTime !== undefined) body.endTime = input.endTime;
+  if (startTime !== undefined) body.startTime = startTime;
+  if (endTime !== undefined) body.endTime = endTime;
   if (input.input !== undefined) body.input = normalizeJsonValue(input.input) ?? null;
   if (input.output !== undefined) body.output = normalizeJsonValue(input.output) ?? null;
   if (input.metadata !== undefined) body.metadata = normalizeJsonValue(input.metadata) ?? null;

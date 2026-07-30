@@ -1,4 +1,5 @@
 import {
+  asNumber,
   asString,
   createEventEvent,
   createGenerationEvent,
@@ -11,6 +12,9 @@ import {
   createSpanEvent,
   createSpanUpdateEvent,
   createTraceEvent,
+  normalizeCostDetails,
+  normalizeTimestamp,
+  normalizeUsageDetails,
   parseJsonMaybe,
   type GenerationEventInput,
   type IngestionEvent,
@@ -57,6 +61,9 @@ export interface LangfuseOperationParameters {
   modelParametersJson?: unknown;
   usageDetailsJson?: unknown;
   costDetailsJson?: unknown;
+  promptTokens?: string | number;
+  completionTokens?: string | number;
+  totalTokens?: string | number;
   completionStartTime?: string;
   promptName?: string;
   promptLabel?: string;
@@ -78,6 +85,30 @@ export interface LangfuseOperationParameters {
   sdkLevel?: 'debug' | 'info' | 'warn' | 'error';
   batchJson?: unknown;
   environment?: string;
+}
+
+/**
+ * Pin a traceId on an observation that is being created.
+ *
+ * Without one Langfuse mints a trace id server-side, which the node never sees:
+ * the output carries no `traceId`, so the next step (Finalize Span, Score, a
+ * nested span) can't attach to the same trace and silently lands in a different
+ * one. Minting it here keeps the whole chain in a single trace and lets the id
+ * be reported back. Updates deliberately don't do this — the observation
+ * already belongs to a trace, and inventing an id would re-point it.
+ */
+function ensureObservationTraceId(input: ObservationEventInput): void {
+  if (input.traceId === undefined) input.traceId = createTraceId();
+}
+
+/**
+ * The moment the operation is recorded at. Make's blueprints derive the envelope
+ * timestamp *and* the observation's start/end time from a single `date`
+ * parameter, so an explicit `Timestamp` does the same here instead of only
+ * labelling the envelope while the timing silently falls back to "now".
+ */
+function resolveEventTime(params: LangfuseOperationParameters): string {
+  return normalizeTimestamp(params.timestamp) ?? currentTimestamp();
 }
 
 function requireString(value: unknown, message: string): string {
@@ -146,30 +177,35 @@ export function buildEventsForOperation(operation: LangfuseIngestionOperation, p
       return [createTraceEvent(toTraceInput(params))];
     case 'spanCreate': {
       const input = toObservationInput(params);
-      // Default startTime to now so the span has timing and renders in Langfuse.
-      if (input.startTime === undefined) input.startTime = currentTimestamp();
+      ensureObservationTraceId(input);
+      // Default startTime so the span has timing and renders in Langfuse.
+      if (input.startTime === undefined) input.startTime = resolveEventTime(params);
       return [createSpanEvent(input)];
     }
     case 'spanUpdate': {
       const input = toObservationInput(params, true);
-      // Default endTime to now so an update closes the span.
-      if (input.endTime === undefined) input.endTime = currentTimestamp();
+      // Default endTime so an update closes the span.
+      if (input.endTime === undefined) input.endTime = resolveEventTime(params);
       return [createSpanUpdateEvent(input)];
     }
     case 'generationCreate': {
       const input = toGenerationInput(params);
-      if (input.startTime === undefined) input.startTime = currentTimestamp();
+      ensureObservationTraceId(input);
+      if (input.startTime === undefined) input.startTime = resolveEventTime(params);
       return [createGenerationEvent(input)];
     }
     case 'generationUpdate': {
       const input = toGenerationInput(params, true);
-      if (input.endTime === undefined) input.endTime = currentTimestamp();
+      if (input.endTime === undefined) input.endTime = resolveEventTime(params);
       return [createGenerationUpdateEvent(input)];
     }
     case 'finalizeSpan':
       return buildFinalizeSpanBatch(params);
-    case 'eventCreate':
-      return [createEventEvent(toObservationInput(params))];
+    case 'eventCreate': {
+      const input = toObservationInput(params);
+      ensureObservationTraceId(input);
+      return [createEventEvent(input)];
+    }
     case 'scoreCreate':
       return [createScoreEvent(toScoreInput(params))];
     case 'sdkLogCreate':
@@ -341,21 +377,28 @@ function toGenerationInput(params: LangfuseOperationParameters, requireObservati
 
   const model = asString(params.model);
   const modelParameters = parseJsonField(params.modelParametersJson);
-  const usageDetails = parseJsonField(params.usageDetailsJson);
-  const costDetails = parseJsonField(params.costDetailsJson);
+  const costDetails = normalizeCostDetails(params.costDetailsJson);
   const completionStartTime = asString(params.completionStartTime);
   const promptName = asString(params.promptName);
   const promptVersion = asString(params.promptVersion);
   const promptLabels = parseJsonField(params.promptLabelsJson);
 
+  // The token counts are also available as three plain fields (as in the
+  // Make.com module). Fold them into Langfuse's usage buckets, letting an
+  // explicit Usage Details JSON win when both are provided.
+  const tokenUsage: Record<string, number> = {};
+  const promptTokens = asNumber(params.promptTokens);
+  const completionTokens = asNumber(params.completionTokens);
+  const totalTokens = asNumber(params.totalTokens);
+  if (promptTokens !== undefined) tokenUsage.input = promptTokens;
+  if (completionTokens !== undefined) tokenUsage.output = completionTokens;
+  if (totalTokens !== undefined) tokenUsage.total = totalTokens;
+  const usageDetails = { ...tokenUsage, ...(normalizeUsageDetails(params.usageDetailsJson) ?? {}) };
+
   if (model !== undefined) input.model = model;
   if (modelParameters !== undefined) input.modelParameters = modelParameters;
-  if (usageDetails && typeof usageDetails === 'object' && !Array.isArray(usageDetails)) {
-    input.usageDetails = usageDetails as Record<string, number>;
-  }
-  if (costDetails && typeof costDetails === 'object' && !Array.isArray(costDetails)) {
-    input.costDetails = costDetails as Record<string, number>;
-  }
+  if (Object.keys(usageDetails).length > 0) input.usageDetails = usageDetails;
+  if (costDetails !== undefined) input.costDetails = costDetails;
   if (completionStartTime !== undefined) input.completionStartTime = completionStartTime;
   if (promptName !== undefined) input.promptName = promptName;
   if (promptVersion !== undefined) {
@@ -441,19 +484,30 @@ function toSdkLogInput(params: LangfuseOperationParameters): SdkLogEventInput {
 function buildFinalizeSpanBatch(params: LangfuseOperationParameters): IngestionEvent[] {
   const spanObservationId = requireString(params.observationId, 'observationId is required for finalizeSpan operations');
   const generationObservationId = asString(params.generationObservationId) ?? `${spanObservationId}_gen`;
+  // Both events in the batch must reference the same trace, otherwise the
+  // generation is filed under a different (or brand new) trace than the span it
+  // belongs to. Left blank there is nothing to pin it to, so it is omitted
+  // rather than invented — an invented id would re-point the existing span.
+  const traceId = asString(params.traceId);
+  const endTime = normalizeTimestamp(params.endTime) ?? resolveEventTime(params);
+
   const generationInput = toGenerationInput(params, false);
   generationInput.observationId = generationObservationId;
   generationInput.parentObservationId = spanObservationId;
   generationInput.name = asString(params.name) ?? 'llm-response';
+  if (traceId !== undefined) generationInput.traceId = traceId;
   // Default the generation's startTime so it has timing.
-  if (generationInput.startTime === undefined) generationInput.startTime = currentTimestamp();
+  if (generationInput.startTime === undefined) generationInput.startTime = resolveEventTime(params);
+  // Close the generation together with the span so Langfuse shows a duration
+  // for it instead of an open-ended observation.
+  if (generationInput.endTime === undefined) generationInput.endTime = endTime;
 
   const spanUpdateInput = toObservationInput(params, true);
   spanUpdateInput.observationId = spanObservationId;
+  if (traceId !== undefined) spanUpdateInput.traceId = traceId;
   // Finalizing only closes the span — don't reset its original startTime.
   delete spanUpdateInput.startTime;
-  // Default endTime to now when not provided.
-  spanUpdateInput.endTime = asString(params.endTime) ?? currentTimestamp();
+  spanUpdateInput.endTime = endTime;
 
   const generation = createGenerationEvent(generationInput);
   const spanUpdate = createSpanUpdateEvent(spanUpdateInput);

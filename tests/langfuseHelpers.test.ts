@@ -16,6 +16,9 @@ import {
   fetchLangfusePrompt,
   LangfuseRequestError,
   normalizeBaseUrl,
+  normalizeCostDetails,
+  normalizeTimestamp,
+  normalizeUsageDetails,
   parseJsonMaybe,
   sendLangfuseIngestion,
   withRetry,
@@ -105,7 +108,11 @@ test('createSpanEvent and createGenerationEvent preserve parent relationships an
   assert.equal(span.body.parentObservationId, '1111111111111111');
   assert.equal(generation.type, 'generation-create');
   assert.equal(generation.body.model, 'gpt-4.1-mini');
-  assert.equal((generation.body.costDetails as { total_cost?: number } | null)?.total_cost, 0.01);
+  // Usage/cost keys are mapped onto the input/output/total buckets Langfuse
+  // actually counts — `prompt_tokens`/`total_cost` are stored as custom
+  // dimensions and never show up as tokens or cost.
+  assert.deepEqual(generation.body.usageDetails, { input: 1, output: 2 });
+  assert.deepEqual(generation.body.costDetails, { total: 0.01 });
 });
 
 test('createScoreEvent serializes numeric and categorical score payloads', () => {
@@ -255,4 +262,28 @@ test('fetchLangfusePrompt uses basic auth and returns the prompt payload', async
     version: 2,
     prompt: 'Hello world',
   });
+});
+
+test('normalizeTimestamp accepts Dates, epoch seconds/millis, and loose date strings', () => {
+  assert.equal(normalizeTimestamp(new Date('2026-06-02T10:00:00.000Z')), '2026-06-02T10:00:00.000Z');
+  assert.equal(normalizeTimestamp('2026-06-02T10:00:00.000Z'), '2026-06-02T10:00:00.000Z');
+  assert.equal(normalizeTimestamp(1780394400000), new Date(1780394400000).toISOString());
+  assert.equal(normalizeTimestamp(1780394400), new Date(1780394400000).toISOString());
+  assert.equal(normalizeTimestamp('1780394400000'), new Date(1780394400000).toISOString());
+  assert.match(String(normalizeTimestamp('2026-06-02 10:00:00')), /^2026-06-02T\d{2}:00:00\.000Z$/);
+  assert.equal(normalizeTimestamp(''), undefined);
+  assert.equal(normalizeTimestamp(undefined), undefined);
+  // Unparseable values are passed through rather than dropped, so Langfuse can
+  // report the problem instead of the field silently disappearing.
+  assert.equal(normalizeTimestamp('not-a-date'), 'not-a-date');
+});
+
+test('normalizeUsageDetails skips non-numeric values Langfuse would reject', () => {
+  assert.deepEqual(normalizeUsageDetails({ input: 1, output: 'n/a', total: '3' }), { input: 1, total: 3 });
+  // A canonical key wins over an alias pointing at the same bucket.
+  assert.deepEqual(normalizeUsageDetails({ prompt_tokens: 5, input: 7 }), { input: 7 });
+  assert.deepEqual(normalizeUsageDetails({ promptTokens: 5, completionTokens: 6 }), { input: 5, output: 6 });
+  assert.equal(normalizeUsageDetails('{}'), undefined);
+  assert.equal(normalizeUsageDetails('not json'), undefined);
+  assert.deepEqual(normalizeCostDetails('{"total_cost":0.01}'), { total: 0.01 });
 });
