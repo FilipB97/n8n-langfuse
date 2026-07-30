@@ -271,7 +271,9 @@ test('normalizeTimestamp accepts Dates, epoch seconds/millis, and loose date str
   assert.equal(normalizeTimestamp(1780394400000), new Date(1780394400000).toISOString());
   assert.equal(normalizeTimestamp(1780394400), new Date(1780394400000).toISOString());
   assert.equal(normalizeTimestamp('1780394400000'), new Date(1780394400000).toISOString());
-  assert.match(String(normalizeTimestamp('2026-06-02 10:00:00')), /^2026-06-02T\d{2}:00:00\.000Z$/);
+  // Compared against the same local-time parse, so the assertion holds in any
+  // timezone (a fixed UTC string would only pass on whole-hour offsets).
+  assert.equal(normalizeTimestamp('2026-06-02 10:00:00'), new Date('2026-06-02T10:00:00').toISOString());
   assert.equal(normalizeTimestamp(''), undefined);
   assert.equal(normalizeTimestamp(undefined), undefined);
   // Unparseable values are passed through rather than dropped, so Langfuse can
