@@ -120,7 +120,20 @@ function requireString(value: unknown, message: string): string {
   return resolved;
 }
 
+/**
+ * Parse a "...JSON" parameter, treating a blank field as *not provided*.
+ *
+ * n8n hands back `''` for a visible-but-empty string field, and passing that on
+ * wrote empty values into Langfuse: `input: ""`, `metadata: ""`,
+ * `modelParameters: null` on every observation where the field was simply left
+ * alone. Returning `undefined` lets the existing `!== undefined` guards omit the
+ * key entirely. Mirrors `asRequestBody` in the Public API layer.
+ */
 function parseJsonField(value: unknown): unknown {
+  if (typeof value === 'string' && value.trim() === '') {
+    return undefined;
+  }
+
   return parseJsonMaybe(value);
 }
 
@@ -140,10 +153,13 @@ export function parseTags(tags: string | string[] | undefined): string[] | undef
     return normalized.length > 0 ? normalized : undefined;
   }
 
-  return tags
+  const normalized = tags
     .split(',')
     .map((tag) => tag.trim())
     .filter(Boolean);
+
+  // A blank field is "no tags", not an empty tag list.
+  return normalized.length > 0 ? normalized : undefined;
 }
 
 export interface LangfusePromptRequestParameters {

@@ -7,8 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-07-30
+
+This release aligns the ingestion payloads with the equivalent Make.com modules. Almost every gap it closes failed **silently**: Langfuse strips unknown keys and answers `207 Multi-Status` when only part of a batch was accepted, so the node reported `ok: true` while data went missing or landed in the wrong trace.
+
 ### Fixed
 
+- **Blank optional fields no longer write empty values.** With `Show Advanced Fields` on, any field left alone was sent as an empty value — `input: ""`, `output: ""`, `metadata: ""`, `modelParameters: null`, `tags: []` on every trace and observation. Blank fields are now omitted from the payload, matching how the Public API side already behaved.
+- **Failures now say what went wrong.** Errors were reported as a bare `Langfuse ingestion failed with status 400`. They now carry Langfuse's own explanation, like the Make.com base config's `[{{statusCode}}] {{body.error}}` — e.g. `Langfuse ingestion failed [400]: Invalid request data — [{"path":["usageDetails","input"],"message":"Expected number, received string"}]`. Applies to ingestion, prompt fetches, and Public API requests.
 - **Observations no longer scatter across separate traces.** `Span Create` / `Generation Create` / `Event Create` left `traceId` off the payload when the field was blank, so Langfuse minted a trace id server-side that the node never saw. The output carried no `traceId`, so the next step could not attach to it — a `Span Create → Finalize Span` chain wrote the span to one trace and its generation to another. The node now pins a `traceId` itself (minting one only when there is nothing to inherit) and reports it back. Updates deliberately do **not** mint one, since inventing an id would re-point an existing observation.
 - **`Finalize Span` sends both of its events to the same trace.** The `generation-create` and `span-update` in the batch resolved their `traceId` independently. They now share one, and the generation closes at the span's `endTime` so Langfuse shows a duration for it instead of an open-ended observation.
 - **`Prompt Labels JSON` no longer disappears.** Langfuse's ingestion API has no top-level `promptLabels` field, so the value was silently stripped. Labels are now stored on the generation as `metadata.prompt_labels` (matching the Make.com blueprint), merged with any other `Metadata JSON`.
@@ -21,6 +27,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`Prompt Tokens`, `Completion Tokens`, and `Total Tokens` fields** on `Generation Create` / `Generation Update` / `Finalize Span`, mirroring the Make.com module's parameters — no hand-written `Usage Details JSON` needed. They map to Langfuse's `input` / `output` / `total` usage buckets; an explicit `Usage Details JSON` still wins.
 - **`errorCount` on the ingestion output.** Langfuse answers `207 Multi-Status` when only some events were accepted, which otherwise reads as a success. The count makes partial failures visible without inspecting `errors` (`Fail On Batch Errors` still turns them into a hard failure).
+
+### Upgrade notes
+
+Three changes can make an existing workflow behave differently — in each case moving from silently-wrong to correct:
+
+- Usage/cost keys such as `prompt_tokens` and `total_cost` are now remapped onto `input` / `output` / `total` instead of being stored as custom dimensions, so tokens and cost start showing up on generations that previously reported none.
+- A set `Timestamp` now supplies the observation's `startTime`/`endTime` defaults, instead of those falling back to "now".
+- Fields left blank are omitted rather than sent as `""` / `null` / `[]`, so traces no longer carry empty `input`/`output`/`metadata`.
 
 ## [1.9.6] - 2026-06-23
 

@@ -335,3 +335,50 @@ test('an explicit Timestamp also drives the observation start/end time, as Make 
   });
   assert.equal((update[0]?.body as { endTime?: unknown }).endTime, '2026-06-02T10:00:05.000Z');
 });
+
+test('blank optional fields are omitted instead of writing empty values', () => {
+  // What n8n actually passes when Advanced Fields are revealed but left alone:
+  // every string field comes back as ''.
+  const blank = {
+    traceId: 'trace-1', observationId: 'span-1',
+    inputJson: '', outputJson: '', metadataJson: '', modelParametersJson: '',
+    promptLabelsJson: '', usageDetailsJson: '', costDetailsJson: '', tags: '',
+    version: '', level: '', statusMessage: '', model: '',
+  };
+
+  assert.deepEqual(buildEventsForOperation('traceCreate', blank)[0]?.body, {
+    id: 'trace-1',
+    timestamp: (buildEventsForOperation('traceCreate', blank)[0]?.body as { timestamp: string }).timestamp,
+    sessionId: 'trace-1',
+  });
+
+  const generation = buildEventsForOperation('finalizeSpan', blank)[0]?.body as Record<string, unknown>;
+  for (const key of ['input', 'output', 'metadata', 'modelParameters', 'usageDetails', 'costDetails']) {
+    assert.equal(generation[key], undefined, `${key} should be omitted when blank`);
+  }
+});
+
+test('parseTags treats a blank or separator-only value as no tags', () => {
+  assert.equal(parseTags(''), undefined);
+  assert.equal(parseTags('  ,  , '), undefined);
+  assert.equal(parseTags([]), undefined);
+  assert.deepEqual(parseTags('["a","b"]'), ['a', 'b']);
+});
+
+test('zero and false are kept — they are values, not missing input', () => {
+  const score = buildEventsForOperation('scoreCreate', { traceId: 't', scoreName: 'n', scoreValue: '0' });
+  assert.equal(score[0]?.body.value, 0);
+
+  const flag = buildEventsForOperation('scoreCreate', { traceId: 't', scoreName: 'n', scoreValue: 'false' });
+  assert.equal(flag[0]?.body.value, false);
+
+  const generation = buildEventsForOperation('generationCreate', { traceId: 't', observationId: 'g', promptTokens: '0' });
+  assert.deepEqual(generation[0]?.body.usageDetails, { input: 0 });
+});
+
+test('non-object metadata is preserved when prompt labels are merged in', () => {
+  const events = buildEventsForOperation('generationCreate', {
+    traceId: 't', observationId: 'g', metadataJson: '"just a note"', promptLabelsJson: '["prod"]',
+  });
+  assert.deepEqual(events[0]?.body.metadata, { metadata: 'just a note', prompt_labels: ['prod'] });
+});
